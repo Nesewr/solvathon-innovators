@@ -36,6 +36,7 @@ const Solver = {
   clearImage() { this.image = null; this.$('qImage').value = ''; this.$('qPreview').classList.add('hidden'); this.$('qImageClear').classList.add('hidden'); },
 
   async solve() {
+    if (Auth.gate()) return;
     const text = this.$('qText').value.trim(), subject = this.$('qSubject').value, tags = U.tags(this.$('qTags').value);
     if (!text && !this.image) { App.toast('문제 텍스트를 적거나 사진을 올려 주세요.', 'error'); this.$('qText').focus(); return; }
     const btn = this.$('solveBtn'); btn.disabled = true;

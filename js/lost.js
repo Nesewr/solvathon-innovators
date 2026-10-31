@@ -12,7 +12,7 @@ const Lost = {
       mode: 'view', floor: '1F', pins: [],
       onPin: id => { this.activeId = this.activeId === id ? null : id; this.render(); }
     });
-    this.$('lostNewBtn').onclick = () => { form.classList.toggle('hidden'); if (!form.date.value) form.date.value = new Date().toISOString().slice(0, 10); form.item.focus(); };
+    this.$('lostNewBtn').onclick = () => { if (Auth.gate()) return; form.classList.toggle('hidden'); if (!form.date.value) form.date.value = new Date().toISOString().slice(0, 10); form.item.focus(); };
     this.$('lostCancel').onclick = () => this.resetForm();
     this.$('lFilter').onchange = () => { this.activeId = null; this.render(); };
     form.onsubmit = e => {
@@ -69,7 +69,7 @@ const Lost = {
     this.activeId = id; this.viewMap.setFloor(l.floor); this.render();
     this.$('lostMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
-  found(id) { Store.update('lost', id, { status: 'found' }); App.toast('찾았다고 표시했습니다. 🎉'); this.render(); },
+  found(id) { if (Auth.gate()) return; Store.update('lost', id, { status: 'found' }); App.toast('찾았다고 표시했습니다. 🎉'); this.render(); },
   reopen(id) { Store.update('lost', id, { status: 'finding' }); this.render(); },
   del(id) { if (confirm('이 글을 삭제할까요?')) { Store.remove('lost', id); if (this.activeId === id) this.activeId = null; this.render(); } }
 };

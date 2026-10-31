@@ -3,8 +3,10 @@ const Auth = {
   DOMAIN: 'jungsan.hs.kr', clientId: '',
   async init() {
     this.$ = id => document.getElementById(id);
-    try { const c = (App.config || {}); this.clientId = c.googleClientId || ''; } catch { }
+    const h = (typeof API !== 'undefined' && API.health) || {};
+    this.clientId = h.googleClientId || (App.config || {}).googleClientId || '';
     if (App.settings().googleClientId) this.clientId = App.settings().googleClientId;
+    this.demoLogin = h.demoLogin !== false; this.requireLogin = !!h.requireLogin;
     this.renderHeader();
     this.$('loginClose').onclick = () => this.$('login').classList.add('hidden');
     this.$('login').addEventListener('click', e => { if (e.target === this.$('login')) this.$('login').classList.add('hidden'); });
@@ -76,8 +78,9 @@ const Auth = {
   /* ---------- 구글 로그인 ---------- */
   openLogin() {
     this.$('login').classList.remove('hidden'); this.$('demoEmail').value = '';
+    this.$('demoLoginWrap').classList.toggle('hidden', !this.demoLogin);
     const box = this.$('gBtn'); box.innerHTML = '';
-    if (!this.clientId) { box.innerHTML = `<p class="small muted">Google 로그인 버튼은 준비 중입니다. 아래에 학교 이메일을 직접 입력해 주세요.</p>`; return; }
+    if (!this.clientId) { box.innerHTML = `<p class="small muted">Google 로그인 버튼은 준비 중입니다.${this.demoLogin ? ' 아래에 학교 이메일을 직접 입력해 주세요.' : ''}</p>`; return; }
     box.innerHTML = `<p class="small muted"><span class="spinner"></span>Google 로그인 불러오는 중…</p>`;
     this.loadGIS().then(() => {
       google.accounts.id.initialize({ client_id: this.clientId, hd: this.DOMAIN, callback: r => this.onGoogle(r), ux_mode: 'popup' });
@@ -96,6 +99,13 @@ const Auth = {
     } catch (e) { App.toast('Google 로그인 처리 실패: ' + e.message, 'error'); }
   },
 
+  /* 쓰기 전에 호출: 로그인 필수 모드인데 로그인 안 됐으면 로그인 창을 띄우고 true 반환 */
+  gate() {
+    if (!this.requireLogin) return false;
+    const p = this.current(); if (p && p.setupDone) return false;
+    App.toast('로그인 후 이용할 수 있습니다.', 'error'); this.openLogin(); return true;
+  },
+
   /* ---------- 상단 표시 ---------- */
   renderHeader() {
     const p = this.current(), el = this.$('authArea');
@@ -104,8 +114,8 @@ const Auth = {
         <span class="nick">${U.esc(p.nickname)}</span><span class="tag green">${this.roleLabel(p)}</span></div>
         <button class="icon" title="로그아웃" onclick="Auth.logout()">⎋</button>`;
     } else {
-      el.innerHTML = `<button class="ghost small on-dark" onclick="Auth.openLogin()">학교 계정 로그인</button><select id="userSelect" title="데모 계정 전환"></select>`;
-      App.renderUsers && App.renderUsers();
+      el.innerHTML = `<button class="ghost small on-dark" onclick="Auth.openLogin()">학교 계정 로그인</button>${this.requireLogin ? '' : '<select id="userSelect" title="데모 계정 전환"></select>'}`;
+      if (!this.requireLogin) App.renderUsers && App.renderUsers();
     }
   }
 };

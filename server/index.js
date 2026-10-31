@@ -13,6 +13,10 @@ const PORT = +ENV('PORT', 8787), DOMAIN = 'jungsan.hs.kr';
 const GEMINI_KEY = ENV('GEMINI_API_KEY'), GEMINI_MODEL = ENV('GEMINI_MODEL', 'gemini-2.5-flash'), GOOGLE_CLIENT_ID = ENV('GOOGLE_CLIENT_ID');
 const ORIGINS = ENV('ALLOWED_ORIGINS').split(',').map(s => s.trim()).filter(Boolean);
 const DB_FILE = path.resolve(__dirname, ENV('DB_FILE', './db.json'));
+const REQUIRE_LOGIN = ENV('REQUIRE_LOGIN', '0') === '1';   // 1이면 글·댓글·투표·분실물·오답노트 쓰기에 로그인 필수
+const ALLOW_DEMO_LOGIN = ENV('ALLOW_DEMO_LOGIN', '1') === '1';
+const ALLOW_RESET = ENV('ALLOW_RESET', '1') === '1';
+const SEED = ENV('SEED', '1') === '1';                      // 0이면 빈 데이터로 시작
 
 /* ---------- 저장소 ---------- */
 const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions'];
@@ -30,7 +34,7 @@ function seed() {
   (s.notes || []).forEach(n => { const id = uid(); db.notes[id] = { id, createdAt: daysAgo(n.daysAgo), author: n.author, subject: n.subject, tags: n.tags, question: n.question, imageDataUrl: null, steps: n.steps, answer: n.answer, concept: n.concept, pitfall: n.pitfall, reviewCount: n.reviewCount || 0, lastReviewed: null, source: 'seed' }; });
   save();
 }
-if (!load() || !Object.keys(db.posts).length) seed();
+if (!load() || (SEED && !Object.keys(db.posts).length)) { if (SEED) seed(); else save(); }
 
 /* ---------- 앱 ---------- */
 const app = express();
@@ -47,7 +51,7 @@ app.use((req, res, next) => {
 const user = req => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); const s = t && db.sessions[t]; return s ? db.profiles[s.email] : null; };
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, demoLogin: ENV('ALLOW_DEMO_LOGIN', '1') === '1', counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
+app.get('/api/health', (req, res) => res.json({ ok: true, ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, googleClientId: GOOGLE_CLIENT_ID || '', demoLogin: ALLOW_DEMO_LOGIN, requireLogin: REQUIRE_LOGIN, allowReset: ALLOW_RESET, counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
 
 /* ---------- 로그인 ---------- */
 function parseEmail(email) {
@@ -67,7 +71,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!r.ok || t.aud !== GOOGLE_CLIENT_ID || t.email_verified !== 'true') return bad(res, 401, 'Google 토큰 검증 실패');
     email = t.email; extra = { googleName: t.name, picture: t.picture };
   } else {
-    if (ENV('ALLOW_DEMO_LOGIN', '1') !== '1') return bad(res, 403, '이메일 직접 입력 로그인이 꺼져 있습니다.');
+    if (!ALLOW_DEMO_LOGIN) return bad(res, 403, '이메일 직접 입력 로그인이 꺼져 있습니다. Google 로그인을 사용하세요.');
     email = req.body.email;
   }
   const p = parseEmail(email); if (p.error) return bad(res, 400, p.error);
@@ -90,7 +94,8 @@ app.post('/api/auth/logout', (req, res) => { const t = (req.headers.authorizatio
 
 /* ---------- 컬렉션 ---------- */
 const PUBLIC = ['posts', 'comments', 'lost'], PRIVATE = ['notes'];
-const who = req => { const u = user(req); return u && u.setupDone ? u.nickname : (req.body && req.body.author) || null; }; // 데모(비로그인)는 보낸 author 그대로
+const who = req => { const u = user(req); return u && u.setupDone ? u.nickname : (REQUIRE_LOGIN ? null : (req.body && req.body.author) || null); }; // 로그인 필수 모드가 아니면 데모 author 허용
+const needLogin = (req, res) => { if (REQUIRE_LOGIN) { const u = user(req); if (!u || !u.setupDone) { bad(res, 401, '로그인이 필요합니다.'); return true; } } return false; };
 function recomputeScores() {
   const sum = {}; Object.values(db.votes).forEach(map => Object.entries(map).forEach(([id, v]) => sum[id] = (sum[id] || 0) + v));
   Object.values(db.posts).forEach(p => { if (p.baseScore == null) p.baseScore = p.score || 0; p.score = p.baseScore + (sum[p.id] || 0); });
@@ -105,6 +110,7 @@ app.get('/api/c/:col', (req, res) => {
   res.json(items.map(({ baseScore, ...x }) => x));
 });
 app.put('/api/c/:col/:id', (req, res) => {
+  if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id, data = req.body;
   if (col === 'votes') { const u = user(req); const me = u && u.setupDone ? u.nickname : id; db.votes[me] = data || {}; recomputeScores(); save(); return res.json({ ok: true }); }
   if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
@@ -117,16 +123,18 @@ app.put('/api/c/:col/:id', (req, res) => {
   save(); res.json({ ok: true, item: db[col][id] });
 });
 app.delete('/api/c/:col/:id', (req, res) => {
+  if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id; if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   const prev = db[col][id]; if (!prev) return res.json({ ok: true });
   const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me) return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
   delete db[col][id]; if (col === 'posts') Object.values(db.comments).filter(c => c.postId === id).forEach(c => delete db.comments[c.id]);
   save(); res.json({ ok: true });
 });
-app.post('/api/admin/reset', (req, res) => { if (ENV('ALLOW_RESET', '1') !== '1') return bad(res, 403, '초기화가 꺼져 있습니다.'); ['posts', 'comments', 'lost', 'notes', 'votes'].forEach(c => db[c] = {}); seed(); res.json({ ok: true }); });
+app.post('/api/admin/reset', (req, res) => { if (!ALLOW_RESET) return bad(res, 403, '초기화가 꺼져 있습니다.'); ['posts', 'comments', 'lost', 'notes', 'votes'].forEach(c => db[c] = {}); seed(); res.json({ ok: true }); });
 
 /* ---------- Gemini 프록시 ---------- */
 app.post('/api/solve', async (req, res) => {
+  if (needLogin(req, res)) return;
   if (!GEMINI_KEY) return bad(res, 503, '서버에 Gemini 키가 없습니다.');
   const { text = '', subject = '', image = null } = req.body || {};
   if (!text && !image) return bad(res, 400, '문제가 비어 있습니다.');
@@ -149,4 +157,4 @@ app.post('/api/solve', async (req, res) => {
 });
 
 app.get('/', (req, res) => res.type('text').send('중산 올인원 API. /api/health 확인'));
-app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}  ai=${!!GEMINI_KEY} google=${!!GOOGLE_CLIENT_ID} db=${DB_FILE}`));
+app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}  ai=${!!GEMINI_KEY} google=${!!GOOGLE_CLIENT_ID} requireLogin=${REQUIRE_LOGIN} demoLogin=${ALLOW_DEMO_LOGIN} seed=${SEED} db=${DB_FILE}`));

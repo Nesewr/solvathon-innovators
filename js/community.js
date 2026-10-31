@@ -4,7 +4,7 @@ const Community = {
   init() {
     this.$ = id => document.getElementById(id);
     const form = this.$('postForm');
-    this.$('postNewBtn').onclick = () => { form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
+    this.$('postNewBtn').onclick = () => { if (Auth.gate()) return; form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
     this.$('postCancel').onclick = () => { form.reset(); form.classList.add('hidden'); };
     this.$('rSearch').oninput = () => this.renderList();
     this.$('rSort').querySelectorAll('button').forEach(b => b.onclick = () => { this.sort = b.dataset.s; this.renderList(); });
@@ -45,7 +45,7 @@ const Community = {
 
   // ----- 동작 -----
   pickCommunity(id) { this.community = id; App.go('community'); this.render(); },
-  vote(e, id, dir) { e.stopPropagation(); this.setVote(id, dir); this.open ? this.renderDetail() : this.renderList(); },
+  vote(e, id, dir) { e.stopPropagation(); if (Auth.gate()) return; this.setVote(id, dir); this.open ? this.renderDetail() : this.renderList(); },
   show(id) { App.go('community', id); },
   back() { App.go('community'); },
   share(e, id) {
@@ -53,7 +53,7 @@ const Community = {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => App.toast('링크를 복사했습니다.')).catch(() => prompt('링크', url));
   },
   comment(e, postId, parentId) {
-    e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;
+    e.preventDefault(); if (Auth.gate()) return; const body = e.target.body.value.trim(); if (!body) return;
     Store.push('comments', { id: U.uid(), postId, parentId: parentId || null, createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), body, score: 0 });
     this.replyTo = null; this.renderDetail();
   },
