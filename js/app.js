@@ -52,6 +52,13 @@ const App = {
   userTag() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? Auth.roleLabel(p) : ''; },
 
   async init() {
+    // 1) 네트워크를 기다리지 않고 바로 화면부터 그린다 (새로고침 때 다른 탭이 비치는 것 방지)
+    this.bindNav(); this.bindSettings();
+    this.modules().forEach(m => m && m.init && m.init());
+    window.addEventListener('hashchange', () => this.route());
+    window.addEventListener('scroll', () => document.querySelector('.top').classList.toggle('scrolled', scrollY > 4));
+    this.route();
+    // 2) 데이터·서버 연결
     try { this.seed = await (await fetch('data/seed.json')).json(); } catch { this.seed = null; }
     let config = {}; try { config = await (await fetch('data/config.json', { cache: 'no-store' })).json(); } catch { }
     this.config = config;
@@ -61,19 +68,17 @@ const App = {
     const online = typeof API !== 'undefined' && API.ready;
     if (!online && !this.settings().seeded && this.seed) this.applySeed();
     if (online) this.saveSettings({ seeded: true });
-    this.bindNav(); this.bindSettings(); this.updateCounts(); this.renderServerState();
+    this.renderServerState();
     document.addEventListener('store:refresh', () => { this.updateCounts(); this.rerender(); });
     document.addEventListener('api:online', async () => {
       this.saveSettings({ seeded: true }); this.renderServerState(); this.toast('서버에 연결됐습니다.');
       if (typeof Auth !== 'undefined') await Auth.onOnline();
       if (typeof Solver !== 'undefined') Solver.renderKeyState(); this.updateCounts(); this.rerender();
     });
-    if (typeof Auth !== 'undefined') await Auth.init(); else this.renderUsers();
     document.addEventListener('store:change', () => { this.updateCounts(); });
-    window.addEventListener('hashchange', () => this.route());
-    window.addEventListener('scroll', () => document.querySelector('.top').classList.toggle('scrolled', scrollY > 4));
-    this.modules().forEach(m => m && m.init && m.init());
-    this.route();
+    if (typeof Auth !== 'undefined') await Auth.init(); else this.renderUsers();
+    this.updateCounts(); this.rerender();
+    if (typeof Solver !== 'undefined') Solver.renderKeyState();
   },
 
   applySeed() {
