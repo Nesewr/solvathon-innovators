@@ -40,8 +40,14 @@ const Auth = {
     if (/[a-z]/.test(local)) return { email, role: 'teacher' };
     return { error: '학생은 입학년도-학번(예: 26-10302), 선생님은 영문이 포함된 주소여야 합니다.' };
   },
-  roleLabel(p) { return p.isAdmin ? '운영자' : p.role === 'teacher' ? '교사' : `${p.grade}학년`; },
+  roleLabel(p) { return p.banned ? '정지' : p.isAdmin ? '운영자' : p.role === 'teacher' ? '교사' : `${p.grade}학년`; },
   isAdmin() { const p = this.current(); return !!(p && p.setupDone && p.isAdmin); },
+  isBanned() { const p = this.current(); return !!(p && p.setupDone && p.banned); },
+  showBanned() {
+    const m = document.getElementById('banned'); if (!m) return;
+    const p = this.current(); document.getElementById('bannedWho').textContent = p ? `${p.nickname}님의 계정은` : '이 계정은';
+    m.classList.remove('hidden');
+  },
   blocked() { const p = this.current(); return new Set((p && p.blocked) || []); },
   isBlocked(nick) { return this.blocked().has(nick); },
   async block(nick, block = true) {
@@ -150,7 +156,7 @@ const Auth = {
     const p = this.current(), el = this.$('authArea');
     if (p && p.setupDone) {
       el.innerHTML = `<div class="who">${p.picture ? `<img src="${p.picture}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar">${U.esc(p.nickname.slice(0, 1))}</span>`}
-        <span class="nick">${U.esc(p.nickname)}</span><span class="tag ${p.isAdmin ? 'admin' : 'green'}">${this.roleLabel(p)}</span></div>
+        <span class="nick">${U.esc(p.nickname)}</span><span class="tag ${p.banned ? 'red' : p.isAdmin ? 'admin' : 'green'}">${this.roleLabel(p)}</span></div>
         <button class="icon" title="로그아웃" onclick="Auth.logout()">⎋</button>`;
     } else {
       el.innerHTML = `<button class="ghost small on-dark" onclick="Auth.openLogin()">학교 계정 로그인</button>${this.requireLogin ? '' : '<select id="userSelect" title="데모 계정 전환"></select>'}`;

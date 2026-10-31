@@ -127,7 +127,11 @@ const App = {
   go(tab, sub) { const h = '#' + tab + (sub ? '/' + sub : ''); if (location.hash !== h) location.hash = h; else this.route(); },
   route(force) {
     const [name, ...rest] = location.hash.slice(1).split('/');
-    const tab = this.tabs.includes(name) ? name : 'home'; this.sub = rest.join('/') || null;
+    let tab = this.tabs.includes(name) ? name : 'home'; this.sub = rest.join('/') || null;
+    if (tab !== 'home' && typeof Auth !== 'undefined' && Auth.isBanned()) {   // 정지된 계정: 홈만
+      tab = 'home'; this.sub = null; if (location.hash && location.hash !== '#home') history.replaceState(null, '', '#home');
+      Auth.showBanned();
+    }
     this.tabs.forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     const mod = this.modules()[this.tabs.indexOf(tab)];

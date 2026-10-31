@@ -53,6 +53,7 @@ const API = {
     const results = await Promise.all(cols.map(c => this.req('GET', `/api/c/${c}?as=${as}`).catch(() => null)));
     let changed = false;
     results.forEach((arr, i) => { if (arr && JSON.stringify(arr) !== JSON.stringify(Store.get(cols[i], []))) { Store.setLocal(cols[i], arr); changed = true; } });
+    if (this.token) { try { const me = await this.req('GET', '/api/me'); const sess = Store.get('session', null); if (me.profile && sess) { const all = Store.get('profiles', {}); const prev = all[sess.email] || {}; if (JSON.stringify(prev) !== JSON.stringify({ ...prev, ...me.profile })) { all[sess.email] = { ...prev, ...me.profile }; Store.setLocal('profiles', all); typeof Auth !== 'undefined' && Auth.renderHeader(); if (me.profile.banned) { App.route(); } changed = true; } } } catch { } }
     const votes = await this.req('GET', `/api/c/votes?as=${as}`).catch(() => null);
     if (votes) { const all = Store.get('votes', {}); const mine = votes[this.me()] || {}; if (JSON.stringify(all[this.me()] || {}) !== JSON.stringify(mine)) { all[this.me()] = mine; Store.setLocal('votes', all); changed = true; } }
     if (changed) document.dispatchEvent(new CustomEvent('store:refresh'));

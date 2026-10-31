@@ -6,7 +6,7 @@
 <title>중산 올인원</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/emblem-180.png">
-<link rel="stylesheet" href="css/style.css?v=10311416">
+<link rel="stylesheet" href="css/style.css?v=10311421">
 </head>
 <body>
 <header class="top">
@@ -337,6 +337,16 @@
   </div>
 </div>
 
+<!-- 정지 안내 -->
+<div class="modal hidden" id="banned">
+  <div class="modal-box" style="border-top-color:var(--error)">
+    <div class="eyebrow" style="color:var(--error)">계정 정지</div>
+    <h3><span id="bannedWho">이 계정은</span> 정지되었습니다</h3>
+    <p class="small muted" style="margin:8px 0 12px">커뮤니티 규칙 위반 신고가 접수되어 운영자가 정지했습니다. 정지 중에는 홈만 볼 수 있고 글·댓글·분실물·AI 풀이·오답노트를 쓸 수 없습니다. 문의는 담당 선생님 또는 운영자에게 해 주세요.</p>
+    <div class="actions"><button class="primary" onclick="document.getElementById('banned').classList.add('hidden');App.go('home')">홈으로</button><button class="ghost" onclick="document.getElementById('banned').classList.add('hidden');Auth.logout()">로그아웃</button></div>
+  </div>
+</div>
+
 <!-- 신고 -->
 <div class="modal hidden" id="report">
   <div class="modal-box">
@@ -354,17 +364,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311416"></script>
-<script src="js/api.js?v=10311416"></script>
-<script src="js/auth.js?v=10311416"></script>
-<script src="js/solver.js?v=10311416"></script>
-<script src="js/notes.js?v=10311416"></script>
-<script src="js/floors.js?v=10311416"></script>
-<script src="js/map.js?v=10311416"></script>
-<script src="js/lost.js?v=10311416"></script>
-<script src="js/home.js?v=10311416"></script>
-<script src="js/activities.js?v=10311416"></script>
-<script src="js/community.js?v=10311416"></script>
+<script src="js/app.js?v=10311421"></script>
+<script src="js/api.js?v=10311421"></script>
+<script src="js/auth.js?v=10311421"></script>
+<script src="js/solver.js?v=10311421"></script>
+<script src="js/notes.js?v=10311421"></script>
+<script src="js/floors.js?v=10311421"></script>
+<script src="js/map.js?v=10311421"></script>
+<script src="js/lost.js?v=10311421"></script>
+<script src="js/home.js?v=10311421"></script>
+<script src="js/activities.js?v=10311421"></script>
+<script src="js/community.js?v=10311421"></script>
 <script>App.init();</script>
 </body>
 </html>
