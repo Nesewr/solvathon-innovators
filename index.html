@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>중산 올인원</title>
-<link rel="stylesheet" href="css/style.css?v=10311258">
+<link rel="stylesheet" href="css/style.css?v=10311300">
 </head>
 <body>
 <header class="top">
@@ -204,7 +204,9 @@
         <select id="aCat"></select>
         <input id="aSearch" class="grow" placeholder="활동 검색">
         <label class="check" style="margin:0"><input type="checkbox" id="aOpen" checked> 진행 중만</label>
+        <select id="aSort"><option value="fit">진로 적합순</option><option value="deadline">마감 임박순</option></select>
       </div>
+      <p class="small muted" id="aTrackHint" style="margin:8px 0 0"></p>
       <div id="aList" class="list"></div>
       <p class="muted small" style="margin-top:12px">데이터 출처: 팀원이 만든 리로스쿨 수집 도구(tools/riro-notifier)로 모은 목록에서 교사 실명을 제거한 정적 파일. 글 내용은 리로스쿨 로그인 후 확인할 수 있습니다.</p>
     </div>
@@ -316,6 +318,15 @@
       <label>닉네임 (화면에 보이는 이름, 실명·학번 금지)
         <div class="row center"><input id="setupNick" class="grow" required minlength="2" maxlength="12"><button type="button" class="ghost small" id="nickRandom">🎲 랜덤</button></div>
       </label>
+      <div class="row">
+        <label class="grow">희망 계열 (생기부 활동 추천에 사용)
+          <select id="setupTrack">
+            <option value="">아직 미정</option><option value="eng">공학·자연과학</option><option value="sw">컴퓨터·소프트웨어</option><option value="med">의학·보건</option>
+            <option value="hum">인문·사회</option><option value="biz">경영·경제</option><option value="edu">교육</option><option value="art">예체능</option>
+          </select>
+        </label>
+        <label class="grow">희망 학과·직업 (선택) <input id="setupMajor" maxlength="30" placeholder="예: 컴퓨터공학, 간호사"></label>
+      </div>
       <label>기본 과목 (AI 문제풀이 기본값)
         <select id="setupSubject"><option>수학</option><option>국어</option><option>영어</option><option>물리</option><option>화학</option><option>생명과학</option><option>지구과학</option><option>사회</option><option>한국사</option><option>기타</option></select>
       </label>
@@ -327,17 +338,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311258"></script>
-<script src="js/api.js?v=10311258"></script>
-<script src="js/auth.js?v=10311258"></script>
-<script src="js/solver.js?v=10311258"></script>
-<script src="js/notes.js?v=10311258"></script>
-<script src="js/floors.js?v=10311258"></script>
-<script src="js/map.js?v=10311258"></script>
-<script src="js/lost.js?v=10311258"></script>
-<script src="js/home.js?v=10311258"></script>
-<script src="js/activities.js?v=10311258"></script>
-<script src="js/community.js?v=10311258"></script>
+<script src="js/app.js?v=10311300"></script>
+<script src="js/api.js?v=10311300"></script>
+<script src="js/auth.js?v=10311300"></script>
+<script src="js/solver.js?v=10311300"></script>
+<script src="js/notes.js?v=10311300"></script>
+<script src="js/floors.js?v=10311300"></script>
+<script src="js/map.js?v=10311300"></script>
+<script src="js/lost.js?v=10311300"></script>
+<script src="js/home.js?v=10311300"></script>
+<script src="js/activities.js?v=10311300"></script>
+<script src="js/community.js?v=10311300"></script>
 <script>App.init();</script>
 </body>
 </html>

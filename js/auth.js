@@ -28,7 +28,9 @@ const Auth = {
     return { error: '학생은 입학년도-학번(예: 26-10302), 선생님은 영문이 포함된 주소여야 합니다.' };
   },
   roleLabel(p) { return p.role === 'teacher' ? '교사' : `${p.grade}학년`; },
-  describe(p) { return p.role === 'teacher' ? '선생님 계정' : `${p.entryYear}년 입학 · ${p.grade}학년 ${p.klass}반 ${p.number}번`; },
+  describe(p) { return (p.role === 'teacher' ? '선생님 계정' : `${p.entryYear}년 입학 · ${p.grade}학년 ${p.klass}반 ${p.number}번`) + (p.track ? ` · 희망 ${this.trackName(p.track)}${p.major ? '(' + p.major + ')' : ''}` : ''); },
+  TRACKS: { eng: '공학·자연과학', sw: '컴퓨터·소프트웨어', med: '의학·보건', hum: '인문·사회', biz: '경영·경제', edu: '교육', art: '예체능' },
+  trackName(t) { return this.TRACKS[t] || '미정'; },
   randomNick() { const a = ['반짝이는', '졸린', '부지런한', '조용한', '용감한', '궁금한', '느긋한', '재빠른'], b = ['솔버', '코더', '펭귄', '고래', '여우', '다람쥐', '올빼미', '수달']; return a[Math.floor(Math.random() * a.length)] + b[Math.floor(Math.random() * b.length)] + Math.floor(Math.random() * 90 + 10); },
 
   /* ---------- 세션 / 프로필 ---------- */
@@ -58,7 +60,8 @@ const Auth = {
       ${p.role === 'student' ? `<div><b>${p.entryYear}</b><span>입학년도</span></div><div><b>${p.grade}-${p.klass}</b><span>학년-반</span></div><div><b>${p.number}번</b><span>번호</span></div>` : ''}</div>
       <p class="small muted">${U.esc(p.email)} 주소에서 자동으로 읽었습니다. 이 정보는 이 기기에만 저장되고 화면에는 닉네임만 보입니다.</p>`;
     this.$('setupNick').value = p.nickname || this.randomNick();
-    this.$('setupSubject').value = p.subject || (p.role === 'teacher' ? '수학' : '수학');
+    this.$('setupSubject').value = p.subject || '수학';
+    this.$('setupTrack').value = p.track || ''; this.$('setupMajor').value = p.major || '';
     this.$('setup').classList.remove('hidden'); this.$('setupNick').focus();
   },
   async finishSetup(e) {
@@ -68,8 +71,10 @@ const Auth = {
     if (/^\d{2}-?\d{5}$|^\d{5}$/.test(nick)) { App.toast('학번은 닉네임으로 쓸 수 없습니다.', 'error'); return; }
     const taken = Object.values(this.profiles()).some(x => x.email !== p.email && x.nickname === nick);
     if (taken) { App.toast('이미 쓰는 닉네임입니다.', 'error'); return; }
-    if (typeof API !== 'undefined' && API.ready) { try { await API.setup({ nickname: nick, subject: this.$('setupSubject').value }); } catch (e) { App.toast(e.message, 'error'); return; } }
-    const all = this.profiles(); all[p.email] = { ...p, nickname: nick, subject: this.$('setupSubject').value, setupDone: true, setupAt: new Date().toISOString() };
+    const track = this.$('setupTrack').value, major = this.$('setupMajor').value.trim().slice(0, 30);
+    if (typeof API !== 'undefined' && API.ready) { try { await API.setup({ nickname: nick, subject: this.$('setupSubject').value, track, major }); } catch (e) { App.toast(e.message, 'error'); return; } }
+    const all = this.profiles(); all[p.email] = { ...p, nickname: nick, subject: this.$('setupSubject').value, track, major, setupDone: true, setupAt: new Date().toISOString() };
+    if (typeof Activities !== 'undefined') Activities.profileChanged();
     Store.setLocal('profiles', all); if (typeof API !== 'undefined' && API.ready) API.pullAll(); this.$('setup').classList.add('hidden'); this.renderHeader();
     if (typeof Solver !== 'undefined') { const sel = document.getElementById('qSubject'); if (sel) sel.value = all[p.email].subject; }
     App.toast(`환영합니다, ${nick}님!`); App.route(true);

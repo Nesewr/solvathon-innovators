@@ -282,3 +282,12 @@ label.check input{width:18px;height:18px;margin:0}
 
 .act.closed{opacity:.55}
 @media (max-width:768px){.tabs{justify-content:flex-start;gap:0;overflow-x:auto}.tabs button{white-space:nowrap;padding:0 8px}}
+
+/* 진로 적합 점수 */
+.fit{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;height:64px;border-radius:var(--r);border:1px solid var(--hairline);background:var(--soft)}
+.fit b{font-size:22px;line-height:1}
+.fit span{font-size:10px;font-weight:700;color:var(--mute);text-transform:uppercase;margin-top:3px}
+.fit.hi{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.fit.hi span{color:#2b4400}
+.fit.mid{border-color:var(--success);color:var(--success)}
+.fit-why{margin:6px 0 0;color:var(--success);font-weight:700}

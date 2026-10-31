@@ -107,7 +107,8 @@ app.post('/api/auth/setup', (req, res) => {
   if (nick.length < 2 || nick.length > 12) return bad(res, 400, '닉네임은 2~12자');
   if (/^\d{2}-?\d{5}$|^\d{5}$/.test(nick)) return bad(res, 400, '학번은 닉네임으로 쓸 수 없습니다.');
   if (Object.values(db.profiles).some(x => x.email !== u.email && x.nickname === nick)) return bad(res, 409, '이미 쓰는 닉네임입니다.');
-  const prof = put('profiles', u.email, { ...u, nickname: nick, subject: req.body.subject || u.subject, setupDone: true, setupAt: new Date().toISOString() });
+  const track = ['eng', 'sw', 'med', 'hum', 'biz', 'edu', 'art'].includes(req.body.track) ? req.body.track : '', major = String(req.body.major || '').slice(0, 30);
+  const prof = put('profiles', u.email, { ...u, nickname: nick, subject: req.body.subject || u.subject, track, major, setupDone: true, setupAt: new Date().toISOString() });
   res.json({ profile: prof });
 });
 app.get('/api/me', (req, res) => { const u = user(req); u ? res.json({ profile: u }) : bad(res, 401, '로그인 안 됨'); });
