@@ -130,9 +130,10 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
   .top{flex-wrap:wrap;height:auto;gap:0 var(--s3);padding:0 var(--s3)}
   .brand{height:52px;order:1}
   .user{order:2;margin-left:auto}
-  .tabs{order:3;flex-basis:100%;border-top:1px solid var(--hairline-strong)}
-  .tabs button{height:44px;padding:0 var(--s3);font-size:14px}
-  .tabs button.active::after{left:var(--s3);right:var(--s3)}
+  .tabs{order:3;flex-basis:100%;border-top:1px solid var(--hairline-strong);justify-content:space-between}
+  .tabs button{height:44px;padding:0 6px;font-size:13.5px}
+  .tabs button.active::after{left:6px;right:6px}
+  .badge{min-width:18px;padding:0 4px;font-size:11px;line-height:18px}
   .brand span:last-child{display:none}
   main{padding:var(--s4) var(--s4) var(--section)}
   .card{padding:var(--s4)}
