@@ -3,7 +3,7 @@ const Auth = {
   DOMAIN: 'jungsan.hs.kr', clientId: '',
   async init() {
     this.$ = id => document.getElementById(id);
-    try { const c = await (await fetch('data/config.json')).json(); this.clientId = c.googleClientId || ''; } catch { }
+    try { const c = (App.config || {}); this.clientId = c.googleClientId || ''; } catch { }
     if (App.settings().googleClientId) this.clientId = App.settings().googleClientId;
     this.renderHeader();
     this.$('loginClose').onclick = () => this.$('login').classList.add('hidden');

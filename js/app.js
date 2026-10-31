@@ -53,7 +53,7 @@ const App = {
 
   async init() {
     try { this.seed = await (await fetch('data/seed.json')).json(); } catch { this.seed = null; }
-    let config = {}; try { config = await (await fetch('data/config.json')).json(); } catch { }
+    let config = {}; try { config = await (await fetch('data/config.json', { cache: 'no-store' })).json(); } catch { }
     this.config = config;
     if (typeof API !== 'undefined') await API.init(config);
     const online = typeof API !== 'undefined' && API.ready;
