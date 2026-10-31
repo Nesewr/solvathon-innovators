@@ -1,5 +1,5 @@
 {
   "googleClientId": "",
-  "apiBase": "",
+  "apiBase": "https://solvathon-innovators.onrender.com",
   "apiBaseLocal": "http://localhost:8787"
 }
