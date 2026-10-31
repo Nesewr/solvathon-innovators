@@ -143,8 +143,8 @@ const Community = {
     const sortBar = this.$('rSort');
     if (c === '__hot') {   // 이번 주 인기: 최근 7일 글을 추천순으로, 정렬 탭 대신 안내
       const week = Date.now() - 7 * 864e5;
-      list = list.filter(p => new Date(p.createdAt) >= week && !p.pinned).sort((a, b) => (b.score || 0) - (a.score || 0) || (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 20);
-      sortBar.innerHTML = '<span class="small" style="padding:6px 10px;font-weight:700">🔥 이번 주 추천 TOP 20 — 최근 7일 글 중 추천이 많은 순</span>';
+      list = list.filter(p => new Date(p.createdAt) >= week && !p.pinned).sort((a, b) => (b.score || 0) - (a.score || 0) || (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 10);
+      sortBar.innerHTML = '<span class="small" style="padding:6px 10px;font-weight:700">🔥 이번 주 추천 TOP 10 — 최근 7일 글 중 추천이 많은 순</span>';
       const el = this.$('postList'); el.classList.remove('hidden');
       if (!list.length) { el.innerHTML = '<div class="empty">이번 주에 올라온 글이 아직 없어요.</div>'; return; }
       el.innerHTML = list.map((p, i) => this.postCard(p, i + 1)).join(''); return;
