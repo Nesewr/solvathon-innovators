@@ -36,6 +36,15 @@ const U = {
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   },
   tags(str) { return String(str || '').split(/[,，]/).map(s => s.trim()).filter(Boolean).slice(0, 6); },
+  // 사진 → 1024px JPEG dataURL
+  resizeImage(file, max = 1024, q = 0.8) {
+    return new Promise((res, rej) => {
+      if (!file || !file.type.startsWith('image/')) return rej(new Error('이미지 파일이 아닙니다'));
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const r = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', q)); };
+      img.onerror = () => rej(new Error('이미지를 읽을 수 없습니다')); img.src = url;
+    });
+  },
   // 아주 작은 마크다운: **굵게**, `코드`, 줄바꿈
   md(s) {
     return U.esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/\n/g, '<br>');

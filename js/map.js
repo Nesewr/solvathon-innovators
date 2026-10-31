@@ -24,7 +24,7 @@ const FloorMap = {
     const onFloor = fl => pins.filter(p => p.floor === fl).length;
     m.el.innerHTML = `
       <div class="map-floors">${FLOOR_ORDER.map(fl => `<button type="button" class="${fl === m.floor ? 'active' : ''}" data-floor="${fl}">${fl}${onFloor(fl) ? `<span class="map-count">${onFloor(fl)}</span>` : ''}</button>`).join('')}
-        <span class="muted small map-hint">${o.mode === 'pick' ? '물건이 있던 자리를 지도에서 클릭하세요' : '<span class="map-legend"><span><i style="background:#76b900"></i>잃어버렸어요</span><span><i style="background:#3f8500"></i>주웠어요</span><span><i style="background:#a7a7a7"></i>해결</span></span>'}</span></div>
+        <span class="muted small map-hint">${o.mode === 'pick' ? '물건이 있던 자리를 지도에서 클릭하세요' : '<span class="map-legend"><span><i style="background:#e52020"></i>잃어버렸어요</span><span><i style="background:#76b900"></i>주웠어요</span><span><i style="background:#a7a7a7"></i>해결</span></span>'}</span></div>
       <div class="map-view"><svg xmlns="http://www.w3.org/2000/svg" viewBox="${f.viewBox}">${f.svg}<g class="pins"></g></svg></div>`;
     m.el.querySelectorAll('.map-floors button').forEach(b => b.onclick = () => m.setFloor(b.dataset.floor));
     const svg = m.el.querySelector('svg'), layer = svg.querySelector('.pins');

@@ -153,11 +153,12 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
 .map-view svg{display:block;width:100%;min-width:520px;height:auto;max-height:420px;font-family:var(--font)}
 .map-view svg{cursor:crosshair}
 .map-view .room:hover rect{stroke:var(--primary);stroke-width:2.5}
-.pin path{fill:var(--primary);stroke:#000;stroke-width:1.6}
+.pin path{fill:#e52020;stroke:#000;stroke-width:1.6}
 .pin circle{fill:#000}
 .pin.done path{fill:#a7a7a7}
 .pin.picked path{fill:#e52020}
-.pin.active path{fill:#000;stroke:var(--primary);stroke-width:2.4}
+.pin.active path{stroke:#000;stroke-width:3}
+.pin.active{filter:drop-shadow(0 0 4px #fff)}
 .pin.active circle{fill:var(--primary)}
 .map-view .pins g{cursor:pointer}
 .map-view .pins g:hover path{stroke-width:2.6}
@@ -366,6 +367,17 @@ label.check input{width:18px;height:18px;margin:0}
 
 /* 분실물 종류 */
 .tag.blue{color:var(--link)}
-.pin.k-found path{fill:#3f8500}
+.pin.k-found path{fill:var(--primary)}
 .map-legend{display:flex;gap:12px;font-size:12px;color:var(--mute);margin-left:auto}
 .map-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* 사진·공지 */
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.photos img{max-height:260px;max-width:100%;border:1px solid var(--hairline);border-radius:var(--r)}
+.photo-thumb{width:64px;height:64px;object-fit:cover;border:1px solid var(--hairline);border-radius:var(--r)}
+.photo-pick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 8px}
+.photo-pick img{width:56px;height:56px;object-fit:cover;border-radius:var(--r);border:1px solid var(--hairline)}
+.r-post.pinned{border-color:var(--ink);border-left:4px solid var(--primary)}
+.notice-strip{display:flex;gap:12px;align-items:center;padding:12px 16px;background:var(--ink);color:var(--on-dark);border-radius:var(--r);cursor:pointer}
+.notice-strip:hover .t{text-decoration:underline}
+.notice-strip .t{font-weight:700;flex:1}

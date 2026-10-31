@@ -29,11 +29,16 @@ const Home = {
     ].map(([n, l]) => `<div><b data-n="${n}">0</b><span>${l}</span></div>`).join('');
     this.$('homeStats').querySelectorAll('b').forEach(b => this.countUp(b, +b.dataset.n));
     if (!this._revealed) { this._revealed = true; this.reveal(); }
+    // 운영자 공지
+    const pinned = typeof Community !== 'undefined' ? Community.pinnedPosts() : [];
+    this.$('homeNotice').innerHTML = pinned.slice(0, 2).map(x => `<div class="notice-strip" onclick="App.go('community','${x.id}')"><span class="tag" style="background:var(--primary);color:var(--on-primary)">📌 공지</span><span class="t">${U.esc(x.title)}</span><span class="small muted">${U.esc(x.author)} · ${U.fmtDate(x.pinnedAt || x.createdAt)}</span></div>`).join('');
     const cta = this.$('homeCta');
     if (p && p.setupDone) {
       const due = typeof Notes !== 'undefined' ? notes.filter(n => Notes.due(n)).length : 0;
       const todayNew = posts.filter(x => new Date(x.createdAt).toDateString() === today).length;
       const items = [];
+      const myFound = lost.filter(l => l.author === p.nickname && l.status === 'found' && l.foundAt && (Date.now() - new Date(l.foundAt)) < 7 * 864e5);
+      if (myFound.length) items.push(`<button class="primary" onclick="App.go('lost');setTimeout(()=>{document.getElementById('lFilter').value='found';Lost.render();},150)">🎉 내 분실물 ${myFound.length}건 찾음 처리됨</button>`);
       if (due) items.push(`<button class="ghost on-dark-btn" onclick="App.go('notes')">복습할 오답노트 ${due}개</button>`);
       if (finding.length) items.push(`<button class="ghost on-dark-btn" onclick="App.go('lost')">찾는 중인 분실물 ${finding.length}건</button>`);
       if (todayNew) items.push(`<button class="ghost on-dark-btn" onclick="App.go('community')">오늘 새 글 ${todayNew}개</button>`);

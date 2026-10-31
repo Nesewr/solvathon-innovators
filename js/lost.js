@@ -1,9 +1,10 @@
 /* 분실물 센터: 지도에 핀 찍어 등록 / 층별 지도에 핀 표시 / 목록(상태 필터, 핀 선택) / 찾았어요 / 삭제(작성자만) */
 const Lost = {
-  activeId: null, pickMap: null, viewMap: null,
+  activeId: null, pickMap: null, viewMap: null, photo: null,
   init() {
     this.$ = id => document.getElementById(id);
     const form = this.$('lostForm');
+    this.$('lostPhoto').onchange = async e => { try { this.photo = await U.resizeImage(e.target.files[0]); this.$('lostPhotoPreview').innerHTML = `<img src="${this.photo}" alt=""><button type="button" class="link" onclick="Lost.photo=null;document.getElementById('lostPhotoPreview').innerHTML='';document.getElementById('lostPhoto').value=''">제거</button>`; } catch (err) { App.toast(err.message, 'error'); } };
     this.pickMap = FloorMap.create(this.$('lostPickMap'), {
       mode: 'pick', floor: '1F',
       onPick: (floor, x, y, room) => { form.floor.value = floor; form.x.value = x; form.y.value = y; form.room.value = room || ''; this.$('lostPickLabel').textContent = `📍 ${floor}${room ? ' · ' + room : ''}`; }
@@ -23,7 +24,7 @@ const Lost = {
         id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(),
         item: f.get('item').trim(), kind: f.get('kind') === 'found' ? 'found' : 'lost',
         floor: f.get('floor'), x: +f.get('x'), y: +f.get('y'), room: f.get('room') || null, place: f.get('place').trim(), date: f.get('date'),
-        desc: f.get('desc').trim(), contact: f.get('contact'), status: 'finding'
+        desc: f.get('desc').trim(), contact: f.get('contact'), status: 'finding', imageDataUrl: this.photo || null
       });
       this.resetForm(); this.$('lFilter').value = 'finding'; this.activeId = item.id;
       App.toast('등록 완료. 지도에 핀이 찍혔습니다.'); this.viewMap.setFloor(item.floor); this.render();
@@ -31,14 +32,14 @@ const Lost = {
   },
   resetForm() {
     const form = this.$('lostForm'); form.reset(); form.classList.add('hidden');
-    this.$('lostPickLabel').textContent = '아직 선택 안 함'; this.pickMap.update({ selected: null });
+    this.$('lostPickLabel').textContent = '아직 선택 안 함'; this.pickMap.update({ selected: null }); this.photo = null; this.$('lostPhotoPreview').innerHTML = ''; this.$('lostPhoto').value = '';
   },
   all() { const b = Auth.blocked(); return Store.get('lost', []).filter(l => !b.has(l.author)); },
   KIND: { lost: ['잃어버렸어요', ''], found: ['주웠어요', 'green'] },
   kindTag(l) { const [label, cls] = this.KIND[l.kind] || this.KIND.lost; return `<span class="tag ${cls}">${label}</span>`; },
   filtered() { const st = this.$('lFilter').value, k = this.$('lKind').value; return this.all().filter(l => (!st || l.status === st) && (!k || (l.kind || 'lost') === k)); },
   render() {
-    const pins = this.filtered().filter(l => l.x != null).map(l => ({ id: l.id, floor: l.floor, x: l.x, y: l.y, status: l.status, kind: l.kind || 'lost', label: `${this.KIND[l.kind || 'lost'][0]} · ${l.item}${l.room ? ' · ' + l.room : ''}` }));
+    const pins = this.filtered().filter(l => l.x != null).map(l => ({ id: l.id, floor: l.floor, x: l.x, y: l.y, status: l.status, kind: l.kind || 'lost', label: `${(this.KIND[l.kind] || this.KIND.lost)[0]} · ${l.item}${l.room ? ' · ' + l.room : ''}` }));
     this.viewMap.update({ pins, activeId: this.activeId });
     this.renderList();
   },
@@ -51,6 +52,7 @@ const Lost = {
     if (!list.length) { el.innerHTML = `<div class="empty">해당하는 분실물이 없어요.</div>`; return; }
     el.innerHTML = list.map(l => `
       <div class="item" style="cursor:default${l.id === a ? ';border-color:var(--primary);border-width:2px' : ''}">
+        ${l.imageDataUrl ? `<img class="photo-thumb" src="${l.imageDataUrl}" alt="" onclick="window.open(this.src)" style="cursor:zoom-in">` : ''}
         <div class="body">
           <div class="meta" style="margin-bottom:4px">
             ${this.kindTag(l)}
@@ -73,7 +75,7 @@ const Lost = {
     this.activeId = id; this.viewMap.setFloor(l.floor); this.render();
     this.$('lostMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
-  found(id) { if (Auth.gate()) return; Store.update('lost', id, { status: 'found' }); App.toast('찾았다고 표시했습니다. 🎉'); this.render(); },
+  found(id) { if (Auth.gate()) return; Store.update('lost', id, { status: 'found', foundAt: new Date().toISOString(), foundBy: App.user() }); App.toast('찾았다고 표시했습니다. 🎉'); this.render(); },
   reopen(id) { Store.update('lost', id, { status: 'finding' }); this.render(); },
   del(id) { if (confirm('이 글을 삭제할까요?')) { Store.remove('lost', id); if (this.activeId === id) this.activeId = null; this.render(); } }
 };

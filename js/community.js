@@ -1,9 +1,13 @@
 /* 커뮤니티 (Reddit 구조): 게시판 / 정렬 / 투표 / 글 상세 / 대댓글 / 공유 */
 const Community = {
-  open: null, community: '', sort: 'hot', replyTo: null,
+  open: null, community: '', sort: 'hot', replyTo: null, photos: [],
   init() {
     this.$ = id => document.getElementById(id);
     const form = this.$('postForm');
+    this.$('postPhoto').onchange = async e => {
+      for (const f of [...e.target.files].slice(0, 2 - this.photos.length)) { try { this.photos.push(await U.resizeImage(f)); } catch (err) { App.toast(err.message, 'error'); } }
+      this.renderPhotoPick(); e.target.value = '';
+    };
     this.$('postNewBtn').onclick = () => { if (Auth.gate()) return; form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
     this.$('postCancel').onclick = () => { form.reset(); form.classList.add('hidden'); };
     this.$('rSearch').oninput = () => this.renderList();
@@ -11,10 +15,13 @@ const Community = {
     this.$('rCommunitySelect').innerHTML = this.communities().map(c => `<option value="${c.id}">${c.icon} ${U.esc(c.name)}</option>`).join('');
     form.onsubmit = e => {
       e.preventDefault(); const f = new FormData(form);
-      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), score: 1 });
-      this.setVote(p.id, 1); form.reset(); form.classList.add('hidden'); App.toast('글을 올렸습니다.'); App.go('community', p.id);
+      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), images: this.photos.slice(0, 2), score: 1 });
+      this.setVote(p.id, 1); form.reset(); form.classList.add('hidden'); this.photos = []; this.renderPhotoPick(); App.toast('글을 올렸습니다.'); App.go('community', p.id);
     };
   },
+  renderPhotoPick() { this.$('postPhotoPreview').innerHTML = this.photos.map((src, i) => `<span><img src="${src}" alt=""><button type="button" class="link" onclick="Community.photos.splice(${i},1);Community.renderPhotoPick()">제거</button></span>`).join(''); },
+  togglePin(id) { const p = this.posts().find(x => x.id === id); if (!p || !Auth.isAdmin()) return; Store.update('posts', id, { pinned: !p.pinned, pinnedAt: !p.pinned ? new Date().toISOString() : null }); App.toast(!p.pinned ? '공지로 고정했습니다.' : '고정을 해제했습니다.'); this.renderDetail(); },
+  pinnedPosts() { return this.posts().filter(p => p.pinned).sort((a, b) => (b.pinnedAt || '') > (a.pinnedAt || '') ? 1 : -1); },
   render(force) {
     if (force) { this.open = null; }
     this.open = App.sub || null;
@@ -134,17 +141,18 @@ const Community = {
     let list = this.posts().filter(p => (!c || c.startsWith('__') || p.community === c) && (!q || (p.title + ' ' + p.body).toLowerCase().includes(q)));
     if (c === '__hot') { this.sort = 'hot'; }
     this.$('rSort').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.s === this.sort));
-    list = this.sorted(list);
+    list = [...list.filter(p => p.pinned).sort((a, b) => (b.pinnedAt || '') > (a.pinnedAt || '') ? 1 : -1), ...this.sorted(list.filter(p => !p.pinned))];
     const el = this.$('postList'); el.classList.remove('hidden');
     if (!list.length) { el.innerHTML = `<div class="empty">글이 없어요. 첫 글을 올려 보세요.</div>`; return; }
     el.innerHTML = list.map(p => {
       const ci = this.cinfo(p.community), n = this.comments(p.id).length;
-      return `<article class="r-post" onclick="Community.show('${p.id}')">
+      return `<article class="r-post ${p.pinned ? 'pinned' : ''}" onclick="Community.show('${p.id}')">
         ${this.voteBox(p.id, p.score)}
         <div class="r-body">
-          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <div class="r-meta">${p.pinned ? '<span class="tag dark">📌 공지</span>' : ''}<span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
           <h3 class="r-title">${U.esc(p.title)}</h3>
           <p class="r-preview">${U.esc(p.body).slice(0, 180)}${p.body.length > 180 ? '…' : ''}</p>
+          ${(p.images || []).length ? `<div class="photos">${p.images.map(src => `<img class="photo-thumb" src="${src}" alt="">`).join('')}</div>` : ''}
           <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>${p.author !== App.user() ? `<button onclick="event.stopPropagation();Auth.report('posts','${p.id}')">⚑ 신고</button>` : ''}</div>
         </div></article>`;
     }).join('');
@@ -171,11 +179,13 @@ const Community = {
       <article class="r-post detail">
         ${this.voteBox(p.id, p.score)}
         <div class="r-body">
-          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <div class="r-meta">${p.pinned ? '<span class="tag dark">📌 공지</span>' : ''}<span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
           <h2 class="r-title">${U.esc(p.title)}</h2>
           <div class="post-body">${U.md(p.body)}</div>
+          ${(p.images || []).length ? `<div class="photos">${p.images.map(src => `<img src="${src}" alt="" onclick="window.open(this.src)" style="cursor:zoom-in">`).join('')}</div>` : ''}
           <div class="r-actions"><span>💬 댓글 ${all.length}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>
             ${p.author === me ? `<button onclick="Community.del('${p.id}')">🗑 삭제</button>` : `<button onclick="Auth.report('posts','${p.id}')">⚑ 신고</button><button onclick="Auth.block('${U.esc(p.author)}')">🚫 ${U.esc(p.author)} 차단</button>`}
+            ${Auth.isAdmin() ? `<button class="adm" onclick="Community.togglePin('${p.id}')">📌 ${p.pinned ? '고정 해제' : '공지로 고정'}</button>` : ''}
             ${Auth.isAdmin() && p.author !== me ? `<button class="adm" onclick="Community.del('${p.id}')">🛡 운영자 삭제</button>` : ''}</div>
         </div></article>
       <form class="card" style="margin-top:12px" onsubmit="Community.comment(event,'${p.id}',null)">

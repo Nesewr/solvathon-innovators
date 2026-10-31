@@ -43,7 +43,7 @@ async function initFirestore() {
 const load = () => { try { const d = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); COLS.forEach(c => db[c] = d[c] || {}); return true; } catch { return false; } };
 let saveTimer = null; const save = () => { if (fsdb) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => fs.writeFile(DB_FILE, JSON.stringify(db), () => { }), 300); };
 // 공통 쓰기 (메모리 + Firestore)
-const slim = obj => { const j = JSON.stringify(obj); if (j.length > 900000 && obj.imageDataUrl) return { ...obj, imageDataUrl: null, imageDropped: true }; return obj; };   // Firestore 문서 1MB 제한
+const slim = obj => { let o = obj; if (JSON.stringify(o).length > 900000 && Array.isArray(o.images) && o.images.length > 1) o = { ...o, images: o.images.slice(0, 1) }; if (JSON.stringify(o).length > 900000 && (o.imageDataUrl || (o.images || []).length)) return { ...o, imageDataUrl: null, images: [], imageDropped: true }; return o; };   // Firestore 문서 1MB 제한
 function put(col, id, obj) { obj = slim(obj); db[col][id] = obj; if (fsdb) fsdb.collection(col).doc(String(id)).set(obj).catch(e => console.error('[firestore] 저장 실패', col, id, e.message)); else save(); return obj; }
 function del(col, id) { delete db[col][id]; if (fsdb) fsdb.collection(col).doc(String(id)).delete().catch(e => console.error('[firestore] 삭제 실패', col, id, e.message)); else save(); }
 async function clearCol(col) { if (fsdb) { const snap = await fsdb.collection(col).get(); const b = fsdb.batch(); snap.forEach(d => b.delete(d.ref)); await b.commit(); } db[col] = {}; save(); }

@@ -6,7 +6,7 @@
 <title>중산 올인원</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/emblem-180.png">
-<link rel="stylesheet" href="css/style.css?v=10311429">
+<link rel="stylesheet" href="css/style.css?v=10311435">
 </head>
 <body>
 <header class="top">
@@ -53,6 +53,7 @@
       </div>
     </div>
 
+    <div id="homeNotice"></div>
     <div class="eyebrow">무엇을 할 수 있나요</div>
     <div class="features">
       <div class="card feature" onclick="App.go('solver')">
@@ -178,6 +179,9 @@
         <input type="hidden" name="floor"><input type="hidden" name="room"><input type="hidden" name="x"><input type="hidden" name="y">
         <label>날짜 <input name="date" type="date" required style="max-width:200px"></label>
         <label>설명 <textarea name="desc" rows="2" placeholder="특징, 스티커, 안에 든 것 등"></textarea></label>
+        <label>사진 (선택)
+          <div class="photo-pick"><label class="file" style="margin:0"><input type="file" id="lostPhoto" accept="image/*"><span>📷 사진 올리기</span></label><span id="lostPhotoPreview"></span></div>
+        </label>
         <label>연락 방법
           <select name="contact">
             <option>교무실에 맡겨 두었어요</option>
@@ -241,6 +245,9 @@
             <label class="grow">제목 <input name="title" required maxlength="120" placeholder="제목"></label>
           </div>
           <label>내용 <textarea name="body" rows="5" required placeholder="내용을 적어 주세요. 실명·학번·전화번호는 쓰지 않습니다."></textarea></label>
+          <label>사진 (최대 2장, 선택)
+            <div class="photo-pick"><label class="file" style="margin:0"><input type="file" id="postPhoto" accept="image/*" multiple><span>📷 사진 올리기</span></label><span id="postPhotoPreview"></span></div>
+          </label>
           <div class="actions"><button class="primary" type="submit">올리기</button><button class="ghost" type="button" id="postCancel">취소</button></div>
         </form>
         <div class="r-sort" id="rSort">
@@ -370,17 +377,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311429"></script>
-<script src="js/api.js?v=10311429"></script>
-<script src="js/auth.js?v=10311429"></script>
-<script src="js/solver.js?v=10311429"></script>
-<script src="js/notes.js?v=10311429"></script>
-<script src="js/floors.js?v=10311429"></script>
-<script src="js/map.js?v=10311429"></script>
-<script src="js/lost.js?v=10311429"></script>
-<script src="js/home.js?v=10311429"></script>
-<script src="js/activities.js?v=10311429"></script>
-<script src="js/community.js?v=10311429"></script>
+<script src="js/app.js?v=10311435"></script>
+<script src="js/api.js?v=10311435"></script>
+<script src="js/auth.js?v=10311435"></script>
+<script src="js/solver.js?v=10311435"></script>
+<script src="js/notes.js?v=10311435"></script>
+<script src="js/floors.js?v=10311435"></script>
+<script src="js/map.js?v=10311435"></script>
+<script src="js/lost.js?v=10311435"></script>
+<script src="js/home.js?v=10311435"></script>
+<script src="js/activities.js?v=10311435"></script>
+<script src="js/community.js?v=10311435"></script>
 <script>App.init();</script>
 </body>
 </html>
