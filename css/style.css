@@ -127,9 +127,13 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
 
 /* 반응형 */
 @media (max-width:768px){
-  .top{gap:var(--s3);padding:0 var(--s3)}
+  .top{flex-wrap:wrap;height:auto;gap:0 var(--s3);padding:0 var(--s3)}
+  .brand{height:52px;order:1}
+  .user{order:2;margin-left:auto}
+  .tabs{order:3;flex-basis:100%;border-top:1px solid var(--hairline-strong)}
+  .tabs button{height:44px;padding:0 var(--s3);font-size:14px}
+  .tabs button.active::after{left:var(--s3);right:var(--s3)}
   .brand span:last-child{display:none}
-  .tabs button{padding:0 var(--s3);font-size:14px}
   main{padding:var(--s4) var(--s4) var(--section)}
   .card{padding:var(--s4)}
   .result-head{margin:calc(-1*var(--s4)) calc(-1*var(--s4)) var(--s4);padding:var(--s3) var(--s4)}
@@ -164,6 +168,7 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
 /* 커뮤니티 — Reddit 3단 레이아웃 */
 .reddit{display:grid;grid-template-columns:200px minmax(0,1fr) 280px;gap:var(--s5);align-items:start}
 .r-left,.r-right{position:sticky;top:80px}
+@media (max-width:768px){.modal-box{padding:var(--s4)}}
 .r-nav{display:flex;flex-direction:column;gap:2px}
 .r-navbtn{display:flex;justify-content:space-between;align-items:center;height:38px;padding:0 var(--s3);background:transparent;border:0;border-left:3px solid transparent;border-radius:var(--r);text-align:left;font-weight:700;color:var(--body)}
 .r-navbtn:hover{background:var(--soft)}
