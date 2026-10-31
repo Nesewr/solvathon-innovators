@@ -41,6 +41,7 @@ const U = {
 const App = {
   seed: null,
   tabs: ['solver', 'notes', 'lost', 'community'],
+  modules() { return [typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community]; },
   settings() { return Store.get('settings', { user: '김솔버', apiKey: '', model: 'gemini-2.5-flash', seeded: false }); },
   saveSettings(patch) { Store.set('settings', { ...this.settings(), ...patch }); },
   user() { return this.settings().user; },
@@ -52,7 +53,7 @@ const App = {
     document.addEventListener('store:change', () => { this.updateCounts(); this.renderUsers(); });
     window.addEventListener('hashchange', () => this.route());
     window.addEventListener('scroll', () => document.querySelector('.top').classList.toggle('scrolled', scrollY > 4));
-    ['Solver', 'Notes', 'Lost', 'Community'].forEach(m => window[m] && window[m].init && window[m].init());
+    this.modules().forEach(m => m && m.init && m.init());
     this.route();
   },
 
@@ -90,8 +91,8 @@ const App = {
     const tab = this.tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'solver';
     this.tabs.forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    const mod = { solver: 'Solver', notes: 'Notes', lost: 'Lost', community: 'Community' }[tab];
-    if (window[mod] && window[mod].render) window[mod].render(force);
+    const mod = this.modules()[this.tabs.indexOf(tab)];
+    if (mod && mod.render) mod.render(force);
     window.scrollTo(0, 0);
   },
 
@@ -113,7 +114,7 @@ const App = {
     };
     const close = () => {
       this.saveSettings({ apiKey: key.value.trim(), model: model.value }); modal.classList.add('hidden');
-      window.Solver && Solver.renderKeyState && Solver.renderKeyState();
+      typeof Solver !== 'undefined' && Solver.renderKeyState();
     };
     document.getElementById('settingsClose').onclick = close;
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
