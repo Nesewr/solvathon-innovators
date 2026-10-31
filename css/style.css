@@ -385,3 +385,16 @@ label.check input{width:18px;height:18px;margin:0}
 .r-rank{display:grid;place-items:center;min-width:34px;background:var(--ink);color:var(--green-pale);font-weight:900;font-size:16px}
 
 .empty.loading{padding:28px;color:var(--mute);display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* 광고판 */
+.ad-card{border:1px solid var(--hairline);border-radius:var(--r);overflow:hidden;background:var(--canvas);position:relative}
+.ad-card::before{content:"";position:absolute;top:-1px;left:-1px;width:10px;height:10px;background:var(--primary);z-index:1}
+.ad-card img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;animation:adfade .6s ease}
+@keyframes adfade{from{opacity:0}to{opacity:1}}
+.ad-card a{display:block}
+.ad-title{padding:8px 10px;font-weight:700;font-size:14px}
+.ad-dots{display:flex;gap:6px;padding:0 10px 10px}
+.ad-dots button{width:8px;height:8px;border-radius:50%;border:0;background:var(--hairline);padding:0}
+.ad-dots button.on{background:var(--primary)}
+.ad-empty{margin-top:16px;padding:10px;border:1px dashed var(--hairline);border-radius:var(--r)}
+@media (max-width:960px){.r-left .ads{flex-basis:100%}.ad-card img{aspect-ratio:16/9}}

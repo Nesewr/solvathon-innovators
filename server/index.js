@@ -20,7 +20,7 @@ const SEED = ENV('SEED', '1') === '1';                      // 0이면 빈 데�
 const ADMINS = ENV('ADMIN_EMAILS', '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);   // 운영자 이메일 목록
 
 /* ---------- 저장소: Firestore(서비스 계정이 있으면) 또는 JSON 파일 ---------- */
-const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions', 'analysis', 'reports'];
+const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions', 'analysis', 'reports', 'ads'];
 let db = Object.fromEntries(COLS.map(c => [c, {}]));
 let fsdb = null;                                   // Firestore 핸들 (없으면 파일 모드)
 function loadServiceAccount() {
@@ -127,7 +127,7 @@ app.post('/api/auth/block', (req, res) => {
 app.post('/api/auth/logout', (req, res) => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); if (db.sessions[t]) del('sessions', t); res.json({ ok: true }); });
 
 /* ---------- 컬렉션 ---------- */
-const PUBLIC = ['posts', 'comments', 'lost'], PRIVATE = ['notes'];
+const PUBLIC = ['posts', 'comments', 'lost', 'ads'], PRIVATE = ['notes'];
 const who = req => { const u = user(req); return u && u.setupDone ? u.nickname : (REQUIRE_LOGIN ? null : (req.body && req.body.author) || null); }; // 로그인 필수 모드가 아니면 데모 author 허용
 const needLogin = (req, res) => { if (REQUIRE_LOGIN) { const u = user(req); if (!u || !u.setupDone) { bad(res, 401, '로그인이 필요합니다.'); return true; } } return false; };
 function recomputeScores(onlyIds) {
@@ -152,6 +152,7 @@ app.put('/api/c/:col/:id', (req, res) => {
   if (col === 'votes') { const u = user(req); const me = u && u.setupDone ? u.nickname : id; const prevMap = db.votes[me] || {}; put('votes', me, data || {}); recomputeScores(new Set([...Object.keys(prevMap), ...Object.keys(data || {})])); return res.json({ ok: true }); }
   if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   if (!data || data.id !== id) return bad(res, 400, 'id 불일치');
+  if (col === 'ads') { if (!isAdmin(req)) return bad(res, 403, '광고는 운영자만 등록할 수 있습니다.'); if (Object.keys(db.ads).length >= 3 && !db.ads[id]) return bad(res, 400, '광고는 최대 3개입니다.'); put('ads', id, { ...data, author: user(req).nickname }); return res.json({ ok: true, item: db.ads[id] }); }
   const me = who(req), prev = db[col][id];
   const admin = isAdmin(req);
   if (prev && prev.author !== me && !admin && !(col === 'lost' && Object.keys(data).every(k => prev[k] === data[k] || k === 'status'))) return bad(res, 403, '본인 글만 수정할 수 있습니다.');
@@ -164,7 +165,8 @@ app.delete('/api/c/:col/:id', (req, res) => {
   if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id; if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   const prev = db[col][id]; if (!prev) return res.json({ ok: true });
-  const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me && !isAdmin(req)) return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
+  if (col === 'ads' && !isAdmin(req)) return bad(res, 403, '광고는 운영자만 삭제할 수 있습니다.');
+  const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me && !isAdmin(req) && col !== 'ads') return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
   del(col, id); if (col === 'posts') Object.values(db.comments).filter(c => c.postId === id).forEach(c => del('comments', c.id));
   res.json({ ok: true });
 });

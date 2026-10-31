@@ -1,6 +1,6 @@
 /* 서버 연동: 서버가 살아 있으면 localStorage를 캐시로 쓰고 쓰기를 서버에 전달, 주기적으로 당겨옴. 없으면 로컬만 사용 */
 const API = {
-  base: '', ready: false, health: null, token: null, pollTimer: null, PUBLIC: ['posts', 'comments', 'lost'], PRIVATE: ['notes'],
+  base: '', ready: false, health: null, token: null, pollTimer: null, PUBLIC: ['posts', 'comments', 'lost', 'ads'], PRIVATE: ['notes'],
   async init(config) {
     const s = App.settings(); const local = ['localhost', '127.0.0.1'].includes(location.hostname);
     this.base = (s.apiBase || (local && config.apiBaseLocal) || config.apiBase || '').replace(/\/$/, '');

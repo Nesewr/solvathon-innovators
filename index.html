@@ -6,7 +6,7 @@
 <title>중산 올인원</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/emblem-180.png">
-<link rel="stylesheet" href="css/style.css?v=10311447">
+<link rel="stylesheet" href="css/style.css?v=10311457">
 </head>
 <body>
 <header class="top">
@@ -232,6 +232,7 @@
         </div>
         <div class="eyebrow" style="margin-top:16px">게시판</div>
         <div class="r-nav" id="rCommunities"></div>
+        <div class="ads" id="rAds"></div>
       </aside>
       <div class="r-main">
         <div class="r-bar">
@@ -360,6 +361,22 @@
   </div>
 </div>
 
+<!-- 광고 등록 (운영자) -->
+<div class="modal hidden" id="adModal">
+  <div class="modal-box">
+    <h3>광고판 등록</h3>
+    <p class="small muted">동아리·행사 포스터를 올리면 커뮤니티 왼쪽 광고판에 번갈아 보입니다. 최대 3개, 운영자만.</p>
+    <form id="adForm">
+      <label>제목 <input name="title" required maxlength="40" placeholder="예: 코딩 동아리 신입 모집"></label>
+      <label>링크 (선택) <input name="link" type="url" placeholder="https://… (리로스쿨 신청 글 등)"></label>
+      <label>포스터 사진
+        <div class="photo-pick"><label class="file" style="margin:0"><input type="file" id="adPhoto" accept="image/*"><span>📷 포스터 올리기</span></label><span id="adPhotoPreview"></span></div>
+      </label>
+      <div class="actions"><button class="primary" type="submit">등록</button><button class="ghost" type="button" id="adClose">취소</button></div>
+    </form>
+  </div>
+</div>
+
 <!-- 신고 -->
 <div class="modal hidden" id="report">
   <div class="modal-box">
@@ -377,17 +394,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311447"></script>
-<script src="js/api.js?v=10311447"></script>
-<script src="js/auth.js?v=10311447"></script>
-<script src="js/solver.js?v=10311447"></script>
-<script src="js/notes.js?v=10311447"></script>
-<script src="js/floors.js?v=10311447"></script>
-<script src="js/map.js?v=10311447"></script>
-<script src="js/lost.js?v=10311447"></script>
-<script src="js/home.js?v=10311447"></script>
-<script src="js/activities.js?v=10311447"></script>
-<script src="js/community.js?v=10311447"></script>
+<script src="js/app.js?v=10311457"></script>
+<script src="js/api.js?v=10311457"></script>
+<script src="js/auth.js?v=10311457"></script>
+<script src="js/solver.js?v=10311457"></script>
+<script src="js/notes.js?v=10311457"></script>
+<script src="js/floors.js?v=10311457"></script>
+<script src="js/map.js?v=10311457"></script>
+<script src="js/lost.js?v=10311457"></script>
+<script src="js/home.js?v=10311457"></script>
+<script src="js/activities.js?v=10311457"></script>
+<script src="js/community.js?v=10311457"></script>
 <script>App.init();</script>
 </body>
 </html>

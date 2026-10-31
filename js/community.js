@@ -26,10 +26,45 @@ const Community = {
   renderPhotoPick() { this.$('postPhotoPreview').innerHTML = this.photos.map((src, i) => `<span><img src="${src}" alt=""><button type="button" class="link" onclick="Community.photos.splice(${i},1);Community.renderPhotoPick()">제거</button></span>`).join(''); },
   togglePin(id) { const p = this.posts().find(x => x.id === id); if (!p || !Auth.isAdmin()) return; Store.update('posts', id, { pinned: !p.pinned, pinnedAt: !p.pinned ? new Date().toISOString() : null }); App.toast(!p.pinned ? '공지로 고정했습니다.' : '고정을 해제했습니다.'); this.renderDetail(); },
   pinnedPosts() { return this.posts().filter(p => p.pinned).sort((a, b) => (b.pinnedAt || '') > (a.pinnedAt || '') ? 1 : -1); },
+  /* ---------- 광고판 ---------- */
+  adIdx: 0, adTimer: null, adPhoto: null,
+  ads() { return Store.get('ads', []).slice(0, 3); },
+  renderAds() {
+    const box = this.$('rAds'); const ads = this.ads(); clearInterval(this.adTimer);
+    if (!ads.length) { box.innerHTML = Auth.isAdmin() ? `<div class="ad-empty"><div class="eyebrow">광고판</div><p class="small muted">동아리·행사 포스터를 올려 보세요.</p><button class="ghost small" onclick="Community.openAd()">+ 광고 등록</button></div>` : ''; return; }
+    this.adIdx = this.adIdx % ads.length;
+    const draw = () => {
+      const a = ads[this.adIdx];
+      box.innerHTML = `<div class="eyebrow" style="margin-top:16px">광고판</div>
+        <div class="ad-card">
+          ${a.link ? `<a href="${U.esc(a.link)}" target="_blank" rel="noopener">` : '<div>'}<img src="${a.imageDataUrl}" alt="${U.esc(a.title)}">${a.link ? '</a>' : '</div>'}
+          <div class="ad-title">${U.esc(a.title)}${a.link ? ' ↗' : ''}</div>
+          ${ads.length > 1 ? `<div class="ad-dots">${ads.map((_, i) => `<button class="${i === this.adIdx ? 'on' : ''}" onclick="Community.adGo(${i})" aria-label="광고 ${i + 1}"></button>`).join('')}</div>` : ''}
+          ${Auth.isAdmin() ? `<div class="row" style="gap:6px;margin-top:6px"><button class="link" onclick="Community.delAd('${a.id}')">삭제</button>${ads.length < 3 ? `<button class="link" onclick="Community.openAd()">+ 등록</button>` : ''}</div>` : ''}
+        </div>`;
+    };
+    draw();
+    if (ads.length > 1) this.adTimer = setInterval(() => { if (document.hidden || !document.getElementById('rAds')) return; this.adIdx = (this.adIdx + 1) % ads.length; draw(); }, 5000);
+  },
+  adGo(i) { this.adIdx = i; this.renderAds(); },
+  openAd() {
+    if (!Auth.isAdmin()) return; const m = this.$('adModal'); m.classList.remove('hidden'); this.adPhoto = null; this.$('adPhotoPreview').innerHTML = ''; this.$('adForm').reset();
+    this.$('adPhoto').onchange = async e => { try { this.adPhoto = await U.resizeImage(e.target.files[0], 900, 0.82); this.$('adPhotoPreview').innerHTML = `<img src="${this.adPhoto}" alt="">`; } catch (err) { App.toast(err.message, 'error'); } };
+    this.$('adClose').onclick = () => m.classList.add('hidden');
+    this.$('adForm').onsubmit = ev => {
+      ev.preventDefault(); if (!this.adPhoto) { App.toast('포스터 사진을 올려 주세요.', 'error'); return; }
+      if (this.ads().length >= 3) { App.toast('광고는 최대 3개입니다. 하나를 지우고 등록하세요.', 'error'); return; }
+      const f = new FormData(this.$('adForm'));
+      Store.push('ads', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), title: f.get('title').trim(), link: (f.get('link') || '').trim(), imageDataUrl: this.adPhoto });
+      m.classList.add('hidden'); App.toast('광고를 등록했습니다.'); this.renderAds();
+    };
+  },
+  delAd(id) { if (!confirm('이 광고를 내릴까요?')) return; Store.remove('ads', id); this.adIdx = 0; this.renderAds(); },
+
   render(force) {
     if (force) { this.open = null; }
     this.open = App.sub || null;
-    this.renderSidebar(); this.renderAbout(); this.renderAdmin();
+    this.renderSidebar(); this.renderAbout(); this.renderAdmin(); this.renderAds();
     if (this.open) { this.renderDetail(); } else { this.$('postDetail').classList.add('hidden'); this.renderList(); }
   },
 

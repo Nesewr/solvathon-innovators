@@ -24,7 +24,7 @@
 | 구분 | 기능 |
 | --- | --- |
 | 필수 (15:30까지 반드시) | ① 문제 텍스트 입력 → AI 단계별 풀이 (Gemini, 키는 서버 환경변수에만) ② 풀이 결과를 오답노트에 자동 저장 + 과목/태그별 목록 ③ 오답노트 상세·"다시 풀기"(풀이 가리기)·삭제 ④ 분실물 신고센터: 층별 지도에 핀 찍어 등록 / 층별 핀 지도 / "찾았어요" 처리 |
-| 선택 (시간이 남으면) | 문제 사진 업로드 → 이미지 인식 후 풀이 · 커뮤니티(Reddit 구조: 게시판·투표·대댓글·공유 링크) · 학교 구글 계정 로그인(이메일 규칙으로 학년·반 자동 인식, 첫 로그인 초기 설정) · 공유 서버(Express + Firestore)로 글·분실물·오답노트 영구 저장 · 생기부 활동 탭(마감 임박순·학년·영역 필터, 희망 계열별 진로 적합 점수, AI 분석) · 홈(실시간 숫자·최근 글·오늘의 할 일) · 잠든 서버 자동 깨우기 · 신고(글·댓글·분실물)·사용자 차단·운영자(환경변수 지정: 삭제·정지·신고 처리·공지 고정) · 글·분실물 사진 첨부 · 내 분실물 찾음 알림 · 이번 주 인기 TOP 10 · 오답노트 복습 알림·삭제 |
+| 선택 (시간이 남으면) | 문제 사진 업로드 → 이미지 인식 후 풀이 · 커뮤니티(Reddit 구조: 게시판·투표·대댓글·공유 링크) · 학교 구글 계정 로그인(이메일 규칙으로 학년·반 자동 인식, 첫 로그인 초기 설정) · 공유 서버(Express + Firestore)로 글·분실물·오답노트 영구 저장 · 생기부 활동 탭(마감 임박순·학년·영역 필터, 희망 계열별 진로 적합 점수, AI 분석) · 홈(실시간 숫자·최근 글·오늘의 할 일) · 잠든 서버 자동 깨우기 · 신고(글·댓글·분실물)·사용자 차단·운영자(환경변수 지정: 삭제·정지·신고 처리·공지 고정) · 글·분실물 사진 첨부 · 내 분실물 찾음 알림 · 이번 주 인기 TOP 10 · 오답노트 복습 알림·삭제 · 운영자 광고판(동아리·행사 포스터 최대 3개 순환) |
 | 제외 (오늘 하지 않음) | OAuth 앱 게시(지금은 등록된 테스트 사용자만 로그인) · 리로스쿨 실시간 크롤링 서버(해외 IP 차단으로 불가, 맥에서 3일마다 수집) · 푸시 알림 · 오답노트 통계 · 화면에서 운영자 지정 |
 
 **완성 여부 (15:30 기준)**
@@ -45,6 +45,7 @@
 ```
 profiles: email, role(student|teacher), entryYear, grade, klass, number, nickname, subject, track(희망 계열), major, setupDone, blocked[](내가 숨긴 닉네임), banned(운영자 정지)
 reports:  id, createdAt, targetType(posts|comments|lost), targetId, reason, detail, reporter, status(open|resolved), snapshot
+ads:      id, createdAt, author(운영자), title, link, imageDataUrl  (최대 3개, 읽기 공개·쓰기 운영자)
 sessions: token → email
 posts:    id, createdAt, author, authorTag, community(study|qna|school|free), title, body, images[](최대 2장), pinned, score(서버가 투표 합으로 계산)
 comments: id, postId, parentId(대댓글), createdAt, author, body, score
