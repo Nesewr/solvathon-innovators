@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>수집 데이터 전달</title></head>
+<body>
+<p id="s">데이터를 기다리는 중...</p>
+<script>
+// 리로스쿨 탭에서 넘어온 JSON(주소의 # 뒤 base64, 또는 postMessage)을 로컬 수신 서버에 저장한다.
+const s = document.getElementById("s");
+async function save(data) {
+  try {
+    const r = await fetch("http://127.0.0.1:8766/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+    s.textContent = "저장됨: " + await r.text();
+  } catch (err) { s.textContent = "저장 실패: " + err.message; }
+}
+function b64ToUtf8(b) { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); }
+if (location.hash.length > 1) {
+  try { save(JSON.parse(b64ToUtf8(location.hash.slice(1)))); } catch (e) { s.textContent = "해석 실패: " + e.message; }
+}
+window.addEventListener("message", e => { if (e.origin.endsWith("riroschool.kr")) save(e.data); });
+</script>
+</body></html>

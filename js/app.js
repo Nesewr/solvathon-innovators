@@ -44,8 +44,8 @@ const U = {
 
 const App = {
   seed: null,
-  tabs: ['home', 'solver', 'notes', 'lost', 'community'],
-  modules() { return [typeof Home !== 'undefined' && Home, typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community]; },
+  tabs: ['home', 'solver', 'notes', 'lost', 'community', 'activities'],
+  modules() { return [typeof Home !== 'undefined' && Home, typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community, typeof Activities !== 'undefined' && Activities]; },
   settings() { return Store.get('settings', { user: '김솔버', apiKey: '', model: 'gemini-2.5-flash', seeded: false }); },
   saveSettings(patch) { Store.set('settings', { ...this.settings(), ...patch }); },
   user() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? p.nickname : this.settings().user; },

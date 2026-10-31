@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>중산 올인원</title>
-<link rel="stylesheet" href="css/style.css?v=10311226">
+<link rel="stylesheet" href="css/style.css?v=10311258">
 </head>
 <body>
 <header class="top">
@@ -17,6 +17,7 @@
     <button data-tab="notes">오답노트 <span class="badge" id="notesCount">0</span></button>
     <button data-tab="lost">분실물 센터 <span class="badge" id="lostCount">0</span></button>
     <button data-tab="community">커뮤니티</button>
+    <button data-tab="activities">생기부 활동</button>
   </nav>
   <div class="user">
     <span class="srv" id="srvState" title="서버 연결 상태"></span>
@@ -38,6 +39,7 @@
           <button onclick="App.go('notes')"><b>✎</b>오답노트</button>
           <button onclick="App.go('lost')"><b>📍</b>분실물 센터</button>
           <button onclick="App.go('community')"><b>💬</b>커뮤니티</button>
+          <button onclick="App.go('activities')"><b>★</b>생기부 활동</button>
         </div>
         <div class="actions">
           <button class="primary lg" id="heroLogin" onclick="Auth.openLogin()">학교 계정으로 시작하기</button>
@@ -66,6 +68,10 @@
       <div class="card feature" onclick="App.go('community')">
         <div class="f-icon">💬</div><h3>커뮤니티</h3>
         <p>공부·입시, 질문, 학교생활, 자유 게시판. 추천과 대댓글로 이야기가 이어집니다.</p><span class="link">바로가기 →</span>
+      </div>
+      <div class="card feature" onclick="App.go('activities')">
+        <div class="f-icon">★</div><h3>생기부 활동</h3>
+        <p>리로스쿨에 흩어진 대회·캠프·봉사·동아리 공지를 마감 임박순으로 모아 보여줍니다.</p><span class="link">바로가기 →</span>
       </div>
     </div>
 
@@ -182,6 +188,25 @@
       <div class="map" id="lostMap" style="margin-top:16px"></div>
       <div class="row between" style="margin-top:12px"><span class="muted small" id="lostFilterLabel"></span></div>
       <div id="lostList" class="list"></div>
+    </div>
+  </section>
+
+  <!-- 생기부 활동 -->
+  <section id="tab-activities" class="tab hidden">
+    <div class="card">
+      <div class="row between">
+        <div><h2>생기부 활동 모아보기</h2><p class="muted small" style="margin:4px 0 0">리로스쿨 공지·가정통신문·신청게시판·경시대회에서 참여형 활동만 골라 마감 임박순으로 보여줍니다. <span id="aMeta"></span></p></div>
+        <span class="tag dark" id="aCount"></span>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <select id="aGrade"><option value="">모든 학년</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select>
+        <select id="aRecord"></select>
+        <select id="aCat"></select>
+        <input id="aSearch" class="grow" placeholder="활동 검색">
+        <label class="check" style="margin:0"><input type="checkbox" id="aOpen" checked> 진행 중만</label>
+      </div>
+      <div id="aList" class="list"></div>
+      <p class="muted small" style="margin-top:12px">데이터 출처: 팀원이 만든 리로스쿨 수집 도구(tools/riro-notifier)로 모은 목록에서 교사 실명을 제거한 정적 파일. 글 내용은 리로스쿨 로그인 후 확인할 수 있습니다.</p>
     </div>
   </section>
 
@@ -302,16 +327,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311226"></script>
-<script src="js/api.js?v=10311226"></script>
-<script src="js/auth.js?v=10311226"></script>
-<script src="js/solver.js?v=10311226"></script>
-<script src="js/notes.js?v=10311226"></script>
-<script src="js/floors.js?v=10311226"></script>
-<script src="js/map.js?v=10311226"></script>
-<script src="js/lost.js?v=10311226"></script>
-<script src="js/home.js?v=10311226"></script>
-<script src="js/community.js?v=10311226"></script>
+<script src="js/app.js?v=10311258"></script>
+<script src="js/api.js?v=10311258"></script>
+<script src="js/auth.js?v=10311258"></script>
+<script src="js/solver.js?v=10311258"></script>
+<script src="js/notes.js?v=10311258"></script>
+<script src="js/floors.js?v=10311258"></script>
+<script src="js/map.js?v=10311258"></script>
+<script src="js/lost.js?v=10311258"></script>
+<script src="js/home.js?v=10311258"></script>
+<script src="js/activities.js?v=10311258"></script>
+<script src="js/community.js?v=10311258"></script>
 <script>App.init();</script>
 </body>
 </html>
