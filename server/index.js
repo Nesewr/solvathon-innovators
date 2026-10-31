@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 try { fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n').forEach(l => { const m = l.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; }); } catch { }
 const ENV = (k, d = '') => (process.env[k] ?? d);
 const PORT = +ENV('PORT', 8787), DOMAIN = 'jungsan.hs.kr';
-const GEMINI_KEY = ENV('GEMINI_API_KEY'), GEMINI_MODEL = ENV('GEMINI_MODEL', 'gemini-flash-latest'), GOOGLE_CLIENT_ID = ENV('GOOGLE_CLIENT_ID');
+const GEMINI_KEY = ENV('GEMINI_API_KEY'), GEMINI_MODEL = ENV('GEMINI_MODEL', 'gemini-3.5-flash-lite'), GOOGLE_CLIENT_ID = ENV('GOOGLE_CLIENT_ID');
 const ORIGINS = ENV('ALLOWED_ORIGINS').split(',').map(s => s.trim()).filter(Boolean);
 const DB_FILE = path.resolve(__dirname, ENV('DB_FILE', './db.json'));
 const REQUIRE_LOGIN = ENV('REQUIRE_LOGIN', '0') === '1';   // 1이면 글·댓글·투표·분실물·오답노트 쓰기에 로그인 필수
@@ -146,7 +146,7 @@ async function listModels() {
 async function pickModel(exclude) {
   const names = await listModels();
   const ex = new Set(exclude || []);
-  const prefs = [GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.5-flash'];
+  const prefs = [GEMINI_MODEL, 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];  // 무료 플랜: 가벼운 모델 우선
   for (const p of prefs) if (names.includes(p) && !ex.has(p)) return p;
   const ok = n => /^gemini/.test(n) && !/tts|image|audio|live|embedding|transcribe|robotics|computer-use|omni|customtools|nano/.test(n) && !ex.has(n);
   const flash = names.filter(n => ok(n) && /flash/.test(n) && !/preview|exp/.test(n)).sort().reverse();
@@ -171,20 +171,21 @@ app.post('/api/solve', async (req, res) => {
     text ? `\n문제:\n${text}` : '\n문제는 첨부한 사진에 있다.'].join('\n');
   const parts = [{ text: prompt }]; if (image) parts.push({ inline_data: { mime_type: 'image/jpeg', data: String(image).split(',')[1] || image } });
   const call = async model => {
-    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 50000);
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
     try {
       return await fetch(`${G}/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3 } })
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 2048 } })
       });
-    } finally { clearTimeout(t); }
+    } catch (e) { return { ok: false, status: 599, text: async () => '응답 지연(25초 초과): ' + e.message }; }   // 지연도 "다음 모델" 사유로 취급
+    finally { clearTimeout(t); }
   };
   try {
     let model = modelCache.chosen || GEMINI_MODEL, r = await call(model), tried = [model], body = '';
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    for (let i = 0; i < 4 && (r.status === 404 || r.status === 400 || r.status === 503 || r.status === 429); i++) {
+    for (let i = 0; i < 4 && [404, 400, 503, 429, 599].includes(r.status); i++) {
       body = await r.text().catch(() => '');
-      if ((r.status === 503 || r.status === 429) && i === 0) { await sleep(1500); r = await call(model); continue; }   // 일시 과부하 → 같은 모델 1회 재시도
+      if ((r.status === 503 || r.status === 429) && i === 0) { await sleep(1200); r = await call(model); continue; }   // 일시 과부하 → 같은 모델 1회 재시도
       const hinted = (body.match(/use\s+models\/([\w.-]+)/i) || [])[1];     // 오류 메시지가 권하는 모델 우선
       const alt = (hinted && !tried.includes(hinted)) ? hinted : await pickModel(tried).catch(() => null);
       if (!alt) break;
