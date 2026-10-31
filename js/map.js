@@ -24,13 +24,13 @@ const FloorMap = {
     const onFloor = fl => pins.filter(p => p.floor === fl).length;
     m.el.innerHTML = `
       <div class="map-floors">${FLOOR_ORDER.map(fl => `<button type="button" class="${fl === m.floor ? 'active' : ''}" data-floor="${fl}">${fl}${onFloor(fl) ? `<span class="map-count">${onFloor(fl)}</span>` : ''}</button>`).join('')}
-        <span class="muted small map-hint">${o.mode === 'pick' ? '물건이 있던 자리를 지도에서 클릭하세요' : '핀을 클릭하면 그 분실물만 봅니다'}</span></div>
+        <span class="muted small map-hint">${o.mode === 'pick' ? '물건이 있던 자리를 지도에서 클릭하세요' : '<span class="map-legend"><span><i style="background:#76b900"></i>잃어버렸어요</span><span><i style="background:#3f8500"></i>주웠어요</span><span><i style="background:#a7a7a7"></i>해결</span></span>'}</span></div>
       <div class="map-view"><svg xmlns="http://www.w3.org/2000/svg" viewBox="${f.viewBox}">${f.svg}<g class="pins"></g></svg></div>`;
     m.el.querySelectorAll('.map-floors button').forEach(b => b.onclick = () => m.setFloor(b.dataset.floor));
     const svg = m.el.querySelector('svg'), layer = svg.querySelector('.pins');
     const place = (x, y, html) => { const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('transform', `translate(${x} ${y})`); g.innerHTML = html; layer.appendChild(g); return g; };
     pins.filter(p => p.floor === m.floor).forEach(p => {
-      const g = place(p.x, p.y, this.PIN(p.status === 'found' ? 'done' : '', U.esc(p.label || '')));
+      const g = place(p.x, p.y, this.PIN(p.status === 'found' ? 'done' : (p.kind === 'found' ? 'k-found' : ''), U.esc(p.label || '')));
       if (o.mode === 'view') g.addEventListener('click', e => { e.stopPropagation(); o.onPin && o.onPin(p.id); });
       if (o.activeId === p.id) g.querySelector('.pin').classList.add('active');
     });

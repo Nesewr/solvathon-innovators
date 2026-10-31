@@ -52,7 +52,7 @@ const Home = {
       : '<div class="empty">아직 글이 없어요. 첫 글을 올려 보세요.</div>';
     this.$('homeLost').innerHTML = finding.length ? finding.slice(0, 5).map(x => `
       <button class="home-item" onclick="App.go('lost');setTimeout(()=>Lost.locate('${x.id}'),150)">
-        <span class="tag ${x.kind === 'found' ? 'green' : ''}">${x.kind === 'found' ? '주웠어요' : '잃어버렸어요'}</span>
+        ${typeof Lost !== 'undefined' ? Lost.kindTag(x) : ''}
         <span class="t">${U.esc(x.item)}</span>
         <span class="m">📍 ${U.esc(x.floor || '')}${x.room ? ' · ' + U.esc(x.room) : ''} · ${U.fmtDate(x.createdAt)}</span></button>`).join('')
       : '<div class="empty">찾는 중인 분실물이 없어요.</div>';

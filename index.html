@@ -6,7 +6,7 @@
 <title>중산 올인원</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/emblem-180.png">
-<link rel="stylesheet" href="css/style.css?v=10311424">
+<link rel="stylesheet" href="css/style.css?v=10311429">
 </head>
 <body>
 <header class="top">
@@ -148,6 +148,11 @@
       <div class="row between">
         <h2>분실물 센터</h2>
         <div class="row">
+          <select id="lKind">
+            <option value="">모든 종류</option>
+            <option value="lost">잃어버렸어요</option>
+            <option value="found">주웠어요</option>
+          </select>
           <select id="lFilter">
             <option value="finding">찾는 중</option>
             <option value="found">찾음</option>
@@ -160,7 +165,7 @@
         <div class="row">
           <label class="grow">물건 <input name="item" required placeholder="예: 검은색 에어팟 케이스"></label>
           <label>종류
-            <select name="kind"><option>잃어버렸어요</option><option>주웠어요</option></select>
+            <select name="kind"><option value="lost">잃어버렸어요</option><option value="found">주웠어요</option></select>
           </label>
         </div>
         <label>위치 (지도에서 물건이 있던 자리를 클릭 → 핀)
@@ -365,17 +370,17 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311424"></script>
-<script src="js/api.js?v=10311424"></script>
-<script src="js/auth.js?v=10311424"></script>
-<script src="js/solver.js?v=10311424"></script>
-<script src="js/notes.js?v=10311424"></script>
-<script src="js/floors.js?v=10311424"></script>
-<script src="js/map.js?v=10311424"></script>
-<script src="js/lost.js?v=10311424"></script>
-<script src="js/home.js?v=10311424"></script>
-<script src="js/activities.js?v=10311424"></script>
-<script src="js/community.js?v=10311424"></script>
+<script src="js/app.js?v=10311429"></script>
+<script src="js/api.js?v=10311429"></script>
+<script src="js/auth.js?v=10311429"></script>
+<script src="js/solver.js?v=10311429"></script>
+<script src="js/notes.js?v=10311429"></script>
+<script src="js/floors.js?v=10311429"></script>
+<script src="js/map.js?v=10311429"></script>
+<script src="js/lost.js?v=10311429"></script>
+<script src="js/home.js?v=10311429"></script>
+<script src="js/activities.js?v=10311429"></script>
+<script src="js/community.js?v=10311429"></script>
 <script>App.init();</script>
 </body>
 </html>

@@ -15,12 +15,13 @@ const Lost = {
     this.$('lostNewBtn').onclick = () => { if (Auth.gate()) return; form.classList.toggle('hidden'); if (!form.date.value) form.date.value = new Date().toISOString().slice(0, 10); form.item.focus(); };
     this.$('lostCancel').onclick = () => this.resetForm();
     this.$('lFilter').onchange = () => { this.activeId = null; this.render(); };
+    this.$('lKind').onchange = () => { this.activeId = null; this.render(); };
     form.onsubmit = e => {
       e.preventDefault(); const f = new FormData(form);
       if (!f.get('x')) { App.toast('지도에서 물건이 있던 자리를 클릭해 핀을 찍어 주세요.', 'error'); this.$('lostPickMap').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       const item = Store.push('lost', {
         id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(),
-        item: f.get('item').trim(), kind: f.get('kind') === '주웠어요' ? 'found' : 'lost',
+        item: f.get('item').trim(), kind: f.get('kind') === 'found' ? 'found' : 'lost',
         floor: f.get('floor'), x: +f.get('x'), y: +f.get('y'), room: f.get('room') || null, place: f.get('place').trim(), date: f.get('date'),
         desc: f.get('desc').trim(), contact: f.get('contact'), status: 'finding'
       });
@@ -33,9 +34,11 @@ const Lost = {
     this.$('lostPickLabel').textContent = '아직 선택 안 함'; this.pickMap.update({ selected: null });
   },
   all() { const b = Auth.blocked(); return Store.get('lost', []).filter(l => !b.has(l.author)); },
-  filtered() { const st = this.$('lFilter').value; return this.all().filter(l => !st || l.status === st); },
+  KIND: { lost: ['잃어버렸어요', ''], found: ['주웠어요', 'green'] },
+  kindTag(l) { const [label, cls] = this.KIND[l.kind] || this.KIND.lost; return `<span class="tag ${cls}">${label}</span>`; },
+  filtered() { const st = this.$('lFilter').value, k = this.$('lKind').value; return this.all().filter(l => (!st || l.status === st) && (!k || (l.kind || 'lost') === k)); },
   render() {
-    const pins = this.filtered().filter(l => l.x != null).map(l => ({ id: l.id, floor: l.floor, x: l.x, y: l.y, status: l.status, label: `${l.item}${l.room ? ' · ' + l.room : ''}` }));
+    const pins = this.filtered().filter(l => l.x != null).map(l => ({ id: l.id, floor: l.floor, x: l.x, y: l.y, status: l.status, kind: l.kind || 'lost', label: `${this.KIND[l.kind || 'lost'][0]} · ${l.item}${l.room ? ' · ' + l.room : ''}` }));
     this.viewMap.update({ pins, activeId: this.activeId });
     this.renderList();
   },
@@ -50,7 +53,7 @@ const Lost = {
       <div class="item" style="cursor:default${l.id === a ? ';border-color:var(--primary);border-width:2px' : ''}">
         <div class="body">
           <div class="meta" style="margin-bottom:4px">
-            <span class="tag ${l.kind === 'found' ? 'green' : ''}">${l.kind === 'found' ? '주웠어요' : '잃어버렸어요'}</span>
+            ${this.kindTag(l)}
             <span class="tag ${l.status === 'found' ? 'green' : 'dark'}">${l.status === 'found' ? '찾음 ✓' : '찾는 중'}</span></div>
           <div class="title" ${l.status === 'found' ? 'style="text-decoration:line-through;color:var(--mute)"' : ''}>${U.esc(l.item)}</div>
           <div class="meta">
@@ -60,7 +63,7 @@ const Lost = {
           <p class="small muted" style="margin:4px 0 0">연락: ${U.esc(l.contact)}</p>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          ${l.status === 'finding' ? `<button class="primary small" onclick="Lost.found('${l.id}')">찾았어요</button>` : `<button class="ghost small" onclick="Lost.reopen('${l.id}')">다시 찾는 중</button>`}
+          ${l.status === 'finding' ? `<button class="primary small" onclick="Lost.found('${l.id}')">${l.kind === 'found' ? '주인 찾음' : '찾았어요'}</button>` : `<button class="ghost small" onclick="Lost.reopen('${l.id}')">다시 찾는 중</button>`}
           ${l.author === me ? `<button class="ghost danger small" onclick="Lost.del('${l.id}')">삭제</button>` : `<button class="ghost small" onclick="Auth.report('lost','${l.id}')">⚑ 신고</button>`}
           ${Auth.isAdmin() && l.author !== me ? `<button class="ghost danger small" onclick="Lost.del('${l.id}')">🛡 삭제</button>` : ''}
         </div></div>`).join('');
