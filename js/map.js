@@ -1,39 +1,45 @@
-/* 층별 지도 컴포넌트: 층 선택 + 교실 클릭(선택) + 분실물 표시(마커) */
+/* 층별 지도 컴포넌트: 층 선택 + 좌표 클릭(핀 찍기) + 핀 표시 */
 const FloorMap = {
-  /* create(container, {mode:'pick'|'view', floor, onPick(floor, room), markers:{ 'floor|room': count }, selected:{floor,room}}) */
-  create(container, opts) {
-    const m = { el: container, opts, floor: opts.floor || '1F' };
+  PIN: (cls, label) => `<g class="pin ${cls}"><path d="M0 0C-6-9-9-13-9-17A9 9 0 1 1 9-17C9-13 6-9 0 0Z"/><circle cy="-17" r="3.4"/>${label ? `<title>${label}</title>` : ''}</g>`,
+  /* create(el, { mode:'pick'|'view', floor, pins:[{id,floor,x,y,label,status}], selected:{floor,x,y}, onPick(floor,x,y,room), onPin(id) }) */
+  create(el, opts) {
+    const m = { el, opts, floor: opts.floor || '1F' };
     m.render = () => this.render(m);
-    m.setFloor = f => { m.floor = f; m.render(); };
+    m.setFloor = f => { if (FLOORS[f]) { m.floor = f; m.render(); } };
     m.update = patch => { Object.assign(m.opts, patch); if (patch.selected && patch.selected.floor) m.floor = patch.selected.floor; m.render(); };
     m.render();
     return m;
   },
-  render(m) {
-    const f = FLOORS[m.floor], o = m.opts, markers = o.markers || {}, sel = o.selected || {};
-    const countOnFloor = fl => Object.entries(markers).filter(([k]) => k.startsWith(fl + '|')).reduce((a, [, v]) => a + v, 0);
-    m.el.innerHTML = `
-      <div class="map-floors">${FLOOR_ORDER.map(fl => `<button type="button" class="${fl === m.floor ? 'active' : ''}" data-floor="${fl}">${fl}${countOnFloor(fl) ? `<span class="map-count">${countOnFloor(fl)}</span>` : ''}</button>`).join('')}
-        <span class="muted small map-hint">${o.mode === 'pick' ? '교실을 클릭하면 위치가 입력됩니다' : '녹색 교실 = 분실물 있음 · 클릭하면 목록 필터'}</span></div>
-      <div class="map-view"><svg xmlns="http://www.w3.org/2000/svg" viewBox="${f.viewBox}">${f.svg}</svg></div>`;
-    m.el.querySelectorAll('.map-floors button').forEach(b => b.onclick = () => m.setFloor(b.dataset.floor));
-    const svg = m.el.querySelector('svg');
+  roomAt(svg, x, y) {
+    let best = null;
     svg.querySelectorAll('.room').forEach(r => {
-      const name = r.dataset.name, key = m.floor + '|' + name, n = markers[key];
-      if (n) {
-        r.classList.add('has-items');
-        const rect = r.querySelector('rect'); if (rect) {
-          const x = +rect.getAttribute('x') + +rect.getAttribute('width') - 2, y = +rect.getAttribute('y') + 2;
-          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'marker'); g.setAttribute('transform', `translate(${x} ${y})`);
-          g.innerHTML = `<circle r="7" fill="#76b900" stroke="#000" stroke-width="1.2"/><text y="2.5" font-size="8" font-weight="700" text-anchor="middle" fill="#000">${n}</text>`;
-          r.appendChild(g);
-        }
-      }
-      if (sel.floor === m.floor && sel.room === name) r.classList.add('selected');
-      r.addEventListener('click', () => {
-        if (o.mode === 'pick') { o.selected = { floor: m.floor, room: name }; m.render(); o.onPick && o.onPick(m.floor, name); }
-        else { o.onPick && o.onPick(m.floor, name, !!n); }
-      });
+      const rc = r.querySelector('rect'); if (!rc) return;
+      const rx = +rc.getAttribute('x'), ry = +rc.getAttribute('y'), rw = +rc.getAttribute('width'), rh = +rc.getAttribute('height');
+      if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) best = r.dataset.name;
+    });
+    return best;
+  },
+  render(m) {
+    const f = FLOORS[m.floor], o = m.opts, pins = (o.pins || []), sel = o.selected;
+    const onFloor = fl => pins.filter(p => p.floor === fl).length;
+    m.el.innerHTML = `
+      <div class="map-floors">${FLOOR_ORDER.map(fl => `<button type="button" class="${fl === m.floor ? 'active' : ''}" data-floor="${fl}">${fl}${onFloor(fl) ? `<span class="map-count">${onFloor(fl)}</span>` : ''}</button>`).join('')}
+        <span class="muted small map-hint">${o.mode === 'pick' ? '물건이 있던 자리를 지도에서 클릭하세요' : '핀을 클릭하면 그 분실물만 봅니다'}</span></div>
+      <div class="map-view"><svg xmlns="http://www.w3.org/2000/svg" viewBox="${f.viewBox}">${f.svg}<g class="pins"></g></svg></div>`;
+    m.el.querySelectorAll('.map-floors button').forEach(b => b.onclick = () => m.setFloor(b.dataset.floor));
+    const svg = m.el.querySelector('svg'), layer = svg.querySelector('.pins');
+    const place = (x, y, html) => { const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('transform', `translate(${x} ${y})`); g.innerHTML = html; layer.appendChild(g); return g; };
+    pins.filter(p => p.floor === m.floor).forEach(p => {
+      const g = place(p.x, p.y, this.PIN(p.status === 'found' ? 'done' : '', U.esc(p.label || '')));
+      if (o.mode === 'view') g.addEventListener('click', e => { e.stopPropagation(); o.onPin && o.onPin(p.id); });
+      if (o.activeId === p.id) g.querySelector('.pin').classList.add('active');
+    });
+    if (sel && sel.floor === m.floor) place(sel.x, sel.y, this.PIN('picked', '선택한 위치'));
+    if (o.mode === 'pick') svg.addEventListener('click', e => {
+      const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const x = Math.round(p.x * 10) / 10, y = Math.round(p.y * 10) / 10, room = this.roomAt(svg, x, y);
+      o.selected = { floor: m.floor, x, y, room }; m.render(); o.onPick && o.onPick(m.floor, x, y, room);
     });
   }
 };

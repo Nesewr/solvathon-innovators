@@ -95,14 +95,14 @@
             <select name="kind"><option>잃어버렸어요</option><option>주웠어요</option></select>
           </label>
         </div>
-        <label>위치 (지도에서 교실 클릭)
+        <label>위치 (지도에서 물건이 있던 자리를 클릭 → 핀)
           <div class="row center" style="margin-bottom:6px">
             <span class="pick-pill" id="lostPickLabel">아직 선택 안 함</span>
             <input name="place" class="grow" placeholder="상세 위치 (예: 뒷문 옆 사물함 위)">
           </div>
           <div class="map map-small" id="lostPickMap"></div>
         </label>
-        <input type="hidden" name="floor"><input type="hidden" name="room">
+        <input type="hidden" name="floor"><input type="hidden" name="room"><input type="hidden" name="x"><input type="hidden" name="y">
         <label>날짜 <input name="date" type="date" required style="max-width:200px"></label>
         <label>설명 <textarea name="desc" rows="2" placeholder="특징, 스티커, 안에 든 것 등"></textarea></label>
         <label>연락 방법
