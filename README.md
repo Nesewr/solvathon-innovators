@@ -169,7 +169,7 @@ npm start                                           # http://localhost:8787
 | GitHub 아이디 | 맡은 일 | 주요 파일 |
 | --- | --- | --- |
 | Nesewr | 기획·전체 설계, AI 도구로 프론트·서버 구현 지휘, Render·Firebase·Google OAuth 설정, 배포·검증 | index.html, js/*, server/index.js, data/config.json |
-| rlazmq | 학교 층별 안내도 제작(분실물 지도의 벡터 도면), README 4·7절 작성 | js/floors.js(도면 데이터), README.md |
+| rlazmq | 학교 층별 안내도 제작(분실물 지도의 벡터 도면), 아이디어 제시, README 4·7절 작성 | js/floors.js(도면 데이터), README.md |
 | jaehyun5471-del | 리로스쿨 활동 수집 도구 제공·데이터 정리, 인터뷰 근거 수집, 테스트 | tools/riro-notifier/, data/activities.json |
 
 ## 8. 한계와 다음 계획
