@@ -95,10 +95,15 @@
             <select name="kind"><option>잃어버렸어요</option><option>주웠어요</option></select>
           </label>
         </div>
-        <div class="row">
-          <label class="grow">장소 <input name="place" required placeholder="예: 3층 과학실 앞"></label>
-          <label>날짜 <input name="date" type="date" required></label>
-        </div>
+        <label>위치 (지도에서 교실 클릭)
+          <div class="row center" style="margin-bottom:6px">
+            <span class="pick-pill" id="lostPickLabel">아직 선택 안 함</span>
+            <input name="place" class="grow" placeholder="상세 위치 (예: 뒷문 옆 사물함 위)">
+          </div>
+          <div class="map map-small" id="lostPickMap"></div>
+        </label>
+        <input type="hidden" name="floor"><input type="hidden" name="room">
+        <label>날짜 <input name="date" type="date" required style="max-width:200px"></label>
         <label>설명 <textarea name="desc" rows="2" placeholder="특징, 스티커, 안에 든 것 등"></textarea></label>
         <label>연락 방법
           <select name="contact">
@@ -113,6 +118,8 @@
           <button class="ghost" type="button" id="lostCancel">취소</button>
         </div>
       </form>
+      <div class="map" id="lostMap" style="margin-top:16px"></div>
+      <div class="row between" style="margin-top:12px"><span class="muted small" id="lostFilterLabel"></span></div>
       <div id="lostList" class="list"></div>
     </div>
   </section>
@@ -166,6 +173,8 @@
 <script src="js/app.js"></script>
 <script src="js/solver.js"></script>
 <script src="js/notes.js"></script>
+<script src="js/floors.js"></script>
+<script src="js/map.js"></script>
 <script src="js/lost.js"></script>
 <script src="js/community.js"></script>
 <script>App.init();</script>

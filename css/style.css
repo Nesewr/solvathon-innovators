@@ -136,3 +136,20 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
   .solution{grid-template-columns:1fr}
   .user select{max-width:92px}
 }
+
+/* 층별 지도 */
+.map{border:1px solid var(--hairline);border-radius:var(--r);overflow:hidden;background:var(--canvas)}
+.map-floors{display:flex;gap:var(--s1);align-items:center;flex-wrap:wrap;padding:var(--s2);background:var(--soft);border-bottom:1px solid var(--hairline)}
+.map-floors button{height:32px;padding:0 var(--s3);background:transparent;border:1px solid var(--hairline);border-radius:var(--r);font-weight:700;font-size:14px}
+.map-floors button.active{background:var(--ink);color:var(--on-dark);border-color:var(--ink)}
+.map-count{display:inline-block;min-width:16px;margin-left:4px;padding:0 4px;background:var(--primary);color:var(--on-primary);border-radius:var(--r);font-size:11px;line-height:16px}
+.map-hint{margin-left:auto}
+.map-view{background:#dfe6ea;overflow:auto}
+.map-view svg{display:block;width:100%;min-width:520px;height:auto;max-height:420px;font-family:var(--font)}
+.map-view .room{cursor:pointer}
+.map-view .room:hover rect{stroke:var(--primary);stroke-width:3}
+.map-view .room.has-items rect{fill:#d9f3a3;stroke:#3f8500;stroke-width:2.4}
+.map-view .room.selected rect{fill:var(--primary);stroke:#000;stroke-width:3}
+.map-view .marker{pointer-events:none}
+.map-small svg{max-height:260px;min-width:420px}
+.pick-pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 var(--s3);background:var(--ink);color:var(--on-dark);border-radius:var(--r);font-weight:700;font-size:14px}
