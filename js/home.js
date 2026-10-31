@@ -1,6 +1,21 @@
 /* 홈: 히어로·숫자·기능 카드·최근 글·찾는 중 분실물 */
 const Home = {
-  init() { this.$ = id => document.getElementById(id); },
+  init() {
+    this.$ = id => document.getElementById(id);
+    this.io = ('IntersectionObserver' in window) ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); this.io.unobserve(e.target); } }), { threshold: .15 }) : null;
+  },
+  /* 숫자 0 → 목표값 카운트업 */
+  countUp(el, to) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || to === 0) { el.textContent = to; return; }
+    const t0 = performance.now(), dur = 900 + Math.min(600, to * 20);
+    const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  },
+  /* 스크롤 등장: 기능 카드·목록·띠에 순차 지연 */
+  reveal() {
+    const els = [...document.querySelectorAll('#tab-home .features .feature, #tab-home .home-cols > .card, #tab-home .cta-strip, #tab-home .foot')];
+    els.forEach((el, i) => { el.classList.add('reveal'); el.style.transitionDelay = (i % 5) * 70 + 'ms'; if (this.io) this.io.observe(el); else el.classList.add('in'); });
+  },
   render() {
     const posts = Store.get('posts', []), lost = Store.get('lost', []), notes = Store.get('notes', []), comments = Store.get('comments', []);
     const finding = lost.filter(l => l.status === 'finding'), today = new Date().toDateString();
@@ -11,7 +26,9 @@ const Home = {
       [finding.length, '찾는 중인 분실물'],
       [posts.length, '커뮤니티 글'],
       [posts.filter(x => new Date(x.createdAt).toDateString() === today).length + comments.filter(x => new Date(x.createdAt).toDateString() === today).length, '오늘 새 글·댓글']
-    ].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+    ].map(([n, l]) => `<div><b data-n="${n}">0</b><span>${l}</span></div>`).join('');
+    this.$('homeStats').querySelectorAll('b').forEach(b => this.countUp(b, +b.dataset.n));
+    if (!this._revealed) { this._revealed = true; this.reveal(); }
     const cta = this.$('homeCta');
     if (p && p.setupDone) {
       const due = typeof Notes !== 'undefined' ? notes.filter(n => Notes.due(n)).length : 0;
