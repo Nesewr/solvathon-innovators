@@ -13,6 +13,15 @@ const Auth = {
     this.$('demoLoginForm').onsubmit = e => { e.preventDefault(); this.login(this.$('demoEmail').value.trim(), {}).then(r => { if (r) this.$('login').classList.add('hidden'); }); };
     this.$('setupForm').onsubmit = e => this.finishSetup(e);
     this.$('nickRandom').onclick = () => { this.$('setupNick').value = this.randomNick(); };
+    // 서버 모드: 로컬에 남은 세션이 서버에도 살아 있는지 확인. 죽었으면 조용히 로그아웃 (초기 설정 창이 헛되이 뜨는 것 방지)
+    if (typeof API !== 'undefined' && API.ready) {
+      const sess = Store.get('session', null);
+      if (sess) {
+        let ok = false;
+        if (sess.token) { try { const me = await API.req('GET', '/api/me'); ok = !!me.profile; if (ok) { const all = this.profiles(); all[sess.email] = { ...(all[sess.email] || {}), ...me.profile }; Store.setLocal('profiles', all); } } catch { ok = false; } }
+        if (!ok) { Store.setLocal('session', null); API.token = null; this.renderHeader(); }
+      }
+    }
     const cur = this.current(); if (cur && !cur.setupDone) this.openSetup();
   },
 
