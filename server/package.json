@@ -4,7 +4,15 @@
   "private": true,
   "type": "module",
   "main": "index.js",
-  "engines": { "node": ">=18" },
-  "scripts": { "start": "node index.js", "dev": "node --watch index.js" },
-  "dependencies": { "express": "^4.19.2" }
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^13.10.0"
+  }
 }

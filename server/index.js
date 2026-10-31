@@ -18,23 +18,44 @@ const ALLOW_DEMO_LOGIN = ENV('ALLOW_DEMO_LOGIN', '1') === '1';
 const ALLOW_RESET = ENV('ALLOW_RESET', '1') === '1';
 const SEED = ENV('SEED', '1') === '1';                      // 0이면 빈 데이터로 시작
 
-/* ---------- 저장소 ---------- */
+/* ---------- 저장소: Firestore(서비스 계정이 있으면) 또는 JSON 파일 ---------- */
 const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions'];
 let db = Object.fromEntries(COLS.map(c => [c, {}]));
+let fsdb = null;                                   // Firestore 핸들 (없으면 파일 모드)
+function loadServiceAccount() {
+  const file = ENV('FIREBASE_SERVICE_ACCOUNT_FILE', path.join(__dirname, 'firebase.json'));
+  try { if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { console.error('[firestore] 키 파일 읽기 실패', e.message); }
+  if (ENV('FIREBASE_SERVICE_ACCOUNT')) { try { return JSON.parse(ENV('FIREBASE_SERVICE_ACCOUNT')); } catch (e) { console.error('[firestore] FIREBASE_SERVICE_ACCOUNT 파싱 실패', e.message); } }
+  return null;
+}
+async function initFirestore() {
+  const sa = loadServiceAccount(); if (!sa) return false;
+  const admin = (await import('firebase-admin')).default;
+  if (!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(sa) });
+  fsdb = admin.firestore(); fsdb.settings({ ignoreUndefinedProperties: true });
+  const snaps = await Promise.all(COLS.map(c => fsdb.collection(c).get()));
+  snaps.forEach((snap, i) => { db[COLS[i]] = {}; snap.forEach(d => db[COLS[i]][d.id] = d.data()); });
+  console.log('[firestore] 연결됨 project=' + sa.project_id + ' ' + COLS.map(c => `${c}:${Object.keys(db[c]).length}`).join(' '));
+  return true;
+}
+// 파일 모드 저장
 const load = () => { try { const d = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); COLS.forEach(c => db[c] = d[c] || {}); return true; } catch { return false; } };
-let saveTimer = null; const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => fs.writeFile(DB_FILE, JSON.stringify(db), () => { }), 300); };
+let saveTimer = null; const save = () => { if (fsdb) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => fs.writeFile(DB_FILE, JSON.stringify(db), () => { }), 300); };
+// 공통 쓰기 (메모리 + Firestore)
+const slim = obj => { const j = JSON.stringify(obj); if (j.length > 900000 && obj.imageDataUrl) return { ...obj, imageDataUrl: null, imageDropped: true }; return obj; };   // Firestore 문서 1MB 제한
+function put(col, id, obj) { obj = slim(obj); db[col][id] = obj; if (fsdb) fsdb.collection(col).doc(String(id)).set(obj).catch(e => console.error('[firestore] 저장 실패', col, id, e.message)); else save(); return obj; }
+function del(col, id) { delete db[col][id]; if (fsdb) fsdb.collection(col).doc(String(id)).delete().catch(e => console.error('[firestore] 삭제 실패', col, id, e.message)); else save(); }
+async function clearCol(col) { if (fsdb) { const snap = await fsdb.collection(col).get(); const b = fsdb.batch(); snap.forEach(d => b.delete(d.ref)); await b.commit(); } db[col] = {}; save(); }
 const uid = () => Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
 const daysAgo = n => new Date(Date.now() - n * 864e5).toISOString();
 
 function seed() {
   let s; try { s = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'seed.json'), 'utf8')); } catch { return; }
-  const addComments = (postId, list, parentId, d) => (list || []).forEach(c => { const id = uid(); db.comments[id] = { id, postId, parentId: parentId || null, createdAt: daysAgo(d), author: c.author, body: c.body, score: c.score || 0 }; addComments(postId, c.replies, id, Math.max(0, d - 0.2)); });
-  (s.posts || []).forEach(p => { const id = uid(); db.posts[id] = { id, createdAt: daysAgo(p.daysAgo), author: p.author, community: p.community || 'free', title: p.title, body: p.body, score: p.score || 0 }; addComments(id, p.comments, null, Math.max(0, p.daysAgo - 0.3)); });
-  (s.lost || []).forEach(l => { const id = uid(); db.lost[id] = { id, createdAt: daysAgo(l.daysAgo), ...l }; });
-  (s.notes || []).forEach(n => { const id = uid(); db.notes[id] = { id, createdAt: daysAgo(n.daysAgo), author: n.author, subject: n.subject, tags: n.tags, question: n.question, imageDataUrl: null, steps: n.steps, answer: n.answer, concept: n.concept, pitfall: n.pitfall, reviewCount: n.reviewCount || 0, lastReviewed: null, source: 'seed' }; });
-  save();
+  const addComments = (postId, list, parentId, d) => (list || []).forEach(c => { const id = uid(); put('comments', id, { id, postId, parentId: parentId || null, createdAt: daysAgo(d), author: c.author, body: c.body, score: c.score || 0, baseScore: c.score || 0 }); addComments(postId, c.replies, id, Math.max(0, d - 0.2)); });
+  (s.posts || []).forEach(p => { const id = uid(); put('posts', id, { id, createdAt: daysAgo(p.daysAgo), author: p.author, community: p.community || 'free', title: p.title, body: p.body, score: p.score || 0, baseScore: p.score || 0 }); addComments(id, p.comments, null, Math.max(0, p.daysAgo - 0.3)); });
+  (s.lost || []).forEach(l => { const id = uid(); put('lost', id, { id, createdAt: daysAgo(l.daysAgo), ...l }); });
+  (s.notes || []).forEach(n => { const id = uid(); put('notes', id, { id, createdAt: daysAgo(n.daysAgo), author: n.author, subject: n.subject, tags: n.tags, question: n.question, imageDataUrl: null, steps: n.steps, answer: n.answer, concept: n.concept, pitfall: n.pitfall, reviewCount: n.reviewCount || 0, lastReviewed: null, source: 'seed' }); });
 }
-if (!load() || (SEED && !Object.keys(db.posts).length)) { if (SEED) seed(); else save(); }
 
 /* ---------- 앱 ---------- */
 const app = express();
@@ -51,7 +72,7 @@ app.use((req, res, next) => {
 const user = req => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); const s = t && db.sessions[t]; return s ? db.profiles[s.email] : null; };
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, googleClientId: GOOGLE_CLIENT_ID || '', demoLogin: ALLOW_DEMO_LOGIN, requireLogin: REQUIRE_LOGIN, allowReset: ALLOW_RESET, counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
+app.get('/api/health', (req, res) => res.json({ ok: true, storage: fsdb ? 'firestore' : 'file', ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, googleClientId: GOOGLE_CLIENT_ID || '', demoLogin: ALLOW_DEMO_LOGIN, requireLogin: REQUIRE_LOGIN, allowReset: ALLOW_RESET, counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
 
 /* ---------- 로그인 ---------- */
 function parseEmail(email) {
@@ -76,9 +97,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
   const p = parseEmail(email); if (p.error) return bad(res, 400, p.error);
   const prev = db.profiles[p.email] || {};
-  db.profiles[p.email] = { ...prev, ...p, ...extra, nickname: prev.nickname || '', setupDone: !!prev.setupDone, subject: prev.subject || '수학', lastLogin: new Date().toISOString() };
-  const token = crypto.randomBytes(24).toString('hex'); db.sessions[token] = { email: p.email, createdAt: new Date().toISOString() }; save();
-  res.json({ token, profile: db.profiles[p.email] });
+  const prof = put('profiles', p.email, { ...prev, ...p, ...extra, nickname: prev.nickname || '', setupDone: !!prev.setupDone, subject: prev.subject || '수학', lastLogin: new Date().toISOString() });
+  const token = crypto.randomBytes(24).toString('hex'); put('sessions', token, { email: p.email, createdAt: new Date().toISOString() });
+  res.json({ token, profile: prof });
 });
 app.post('/api/auth/setup', (req, res) => {
   const u = user(req); if (!u) return bad(res, 401, '로그인이 필요합니다.');
@@ -86,20 +107,23 @@ app.post('/api/auth/setup', (req, res) => {
   if (nick.length < 2 || nick.length > 12) return bad(res, 400, '닉네임은 2~12자');
   if (/^\d{2}-?\d{5}$|^\d{5}$/.test(nick)) return bad(res, 400, '학번은 닉네임으로 쓸 수 없습니다.');
   if (Object.values(db.profiles).some(x => x.email !== u.email && x.nickname === nick)) return bad(res, 409, '이미 쓰는 닉네임입니다.');
-  Object.assign(u, { nickname: nick, subject: req.body.subject || u.subject, setupDone: true, setupAt: new Date().toISOString() }); save();
-  res.json({ profile: u });
+  const prof = put('profiles', u.email, { ...u, nickname: nick, subject: req.body.subject || u.subject, setupDone: true, setupAt: new Date().toISOString() });
+  res.json({ profile: prof });
 });
 app.get('/api/me', (req, res) => { const u = user(req); u ? res.json({ profile: u }) : bad(res, 401, '로그인 안 됨'); });
-app.post('/api/auth/logout', (req, res) => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); delete db.sessions[t]; save(); res.json({ ok: true }); });
+app.post('/api/auth/logout', (req, res) => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); if (db.sessions[t]) del('sessions', t); res.json({ ok: true }); });
 
 /* ---------- 컬렉션 ---------- */
 const PUBLIC = ['posts', 'comments', 'lost'], PRIVATE = ['notes'];
 const who = req => { const u = user(req); return u && u.setupDone ? u.nickname : (REQUIRE_LOGIN ? null : (req.body && req.body.author) || null); }; // 로그인 필수 모드가 아니면 데모 author 허용
 const needLogin = (req, res) => { if (REQUIRE_LOGIN) { const u = user(req); if (!u || !u.setupDone) { bad(res, 401, '로그인이 필요합니다.'); return true; } } return false; };
-function recomputeScores() {
+function recomputeScores(onlyIds) {
   const sum = {}; Object.values(db.votes).forEach(map => Object.entries(map).forEach(([id, v]) => sum[id] = (sum[id] || 0) + v));
-  Object.values(db.posts).forEach(p => { if (p.baseScore == null) p.baseScore = p.score || 0; p.score = p.baseScore + (sum[p.id] || 0); });
-  Object.values(db.comments).forEach(c => { if (c.baseScore == null) c.baseScore = c.score || 0; c.score = c.baseScore + (sum[c.id] || 0); });
+  for (const col of ['posts', 'comments']) Object.values(db[col]).forEach(x => {
+    if (onlyIds && !onlyIds.has(x.id)) return;
+    const base = x.baseScore == null ? (x.score || 0) : x.baseScore, score = base + (sum[x.id] || 0);
+    if (x.baseScore !== base || x.score !== score) put(col, x.id, { ...x, baseScore: base, score });
+  });
 }
 app.get('/api/c/:col', (req, res) => {
   const col = req.params.col; if (!PUBLIC.includes(col) && !PRIVATE.includes(col) && col !== 'votes') return bad(res, 404, '없는 컬렉션');
@@ -112,25 +136,25 @@ app.get('/api/c/:col', (req, res) => {
 app.put('/api/c/:col/:id', (req, res) => {
   if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id, data = req.body;
-  if (col === 'votes') { const u = user(req); const me = u && u.setupDone ? u.nickname : id; db.votes[me] = data || {}; recomputeScores(); save(); return res.json({ ok: true }); }
+  if (col === 'votes') { const u = user(req); const me = u && u.setupDone ? u.nickname : id; const prevMap = db.votes[me] || {}; put('votes', me, data || {}); recomputeScores(new Set([...Object.keys(prevMap), ...Object.keys(data || {})])); return res.json({ ok: true }); }
   if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   if (!data || data.id !== id) return bad(res, 400, 'id 불일치');
   const me = who(req), prev = db[col][id];
   if (prev && prev.author !== me && !(col === 'lost' && Object.keys(data).every(k => prev[k] === data[k] || k === 'status'))) return bad(res, 403, '본인 글만 수정할 수 있습니다.');
   if (!prev && data.author !== me) return bad(res, 403, '작성자가 일치하지 않습니다.');
-  if (col === 'posts' || col === 'comments') { db[col][id] = { ...data, baseScore: prev ? (prev.baseScore ?? 0) : 0 }; recomputeScores(); } // 점수는 서버의 투표 합으로만 계산
-  else db[col][id] = { ...prev, ...data };
-  save(); res.json({ ok: true, item: db[col][id] });
+  if (col === 'posts' || col === 'comments') { put(col, id, { ...data, baseScore: prev ? (prev.baseScore ?? 0) : 0 }); recomputeScores(new Set([id])); } // 점수는 서버의 투표 합으로만 계산
+  else put(col, id, { ...prev, ...data });
+  res.json({ ok: true, item: db[col][id] });
 });
 app.delete('/api/c/:col/:id', (req, res) => {
   if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id; if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   const prev = db[col][id]; if (!prev) return res.json({ ok: true });
   const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me) return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
-  delete db[col][id]; if (col === 'posts') Object.values(db.comments).filter(c => c.postId === id).forEach(c => delete db.comments[c.id]);
-  save(); res.json({ ok: true });
+  del(col, id); if (col === 'posts') Object.values(db.comments).filter(c => c.postId === id).forEach(c => del('comments', c.id));
+  res.json({ ok: true });
 });
-app.post('/api/admin/reset', (req, res) => { if (!ALLOW_RESET) return bad(res, 403, '초기화가 꺼져 있습니다.'); ['posts', 'comments', 'lost', 'notes', 'votes'].forEach(c => db[c] = {}); seed(); res.json({ ok: true }); });
+app.post('/api/admin/reset', async (req, res) => { if (!ALLOW_RESET) return bad(res, 403, '초기화가 꺼져 있습니다.'); for (const c of ['posts', 'comments', 'lost', 'notes', 'votes']) await clearCol(c); seed(); res.json({ ok: true }); });
 
 /* ---------- Gemini 프록시 ---------- */
 const G = 'https://generativelanguage.googleapis.com/v1beta';
@@ -200,4 +224,9 @@ app.post('/api/solve', async (req, res) => {
 });
 
 app.get('/', (req, res) => res.type('text').send('중산 올인원 API. /api/health 확인'));
-app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}  ai=${!!GEMINI_KEY} google=${!!GOOGLE_CLIENT_ID} requireLogin=${REQUIRE_LOGIN} demoLogin=${ALLOW_DEMO_LOGIN} seed=${SEED} db=${DB_FILE}`));
+(async () => {
+  let fsOK = false; try { fsOK = await initFirestore(); } catch (e) { console.error('[firestore] 초기화 실패, 파일 모드로 전환:', e.message); fsdb = null; }
+  if (!fsOK) { if (!load()) save(); }
+  if (SEED && !Object.keys(db.posts).length) seed();
+  app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}  ai=${!!GEMINI_KEY} google=${!!GOOGLE_CLIENT_ID} requireLogin=${REQUIRE_LOGIN} demoLogin=${ALLOW_DEMO_LOGIN} seed=${SEED} storage=${fsdb ? 'firestore' : 'file:' + DB_FILE}`));
+})();
