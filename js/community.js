@@ -18,15 +18,15 @@ const Community = {
   render(force) {
     if (force) { this.open = null; }
     this.open = App.sub || null;
-    this.renderSidebar(); this.renderAbout();
+    this.renderSidebar(); this.renderAbout(); this.renderAdmin();
     if (this.open) { this.renderDetail(); } else { this.$('postDetail').classList.add('hidden'); this.renderList(); }
   },
 
   // ----- 데이터 -----
   communities() { return (App.seed && App.seed.communities) || [{ id: 'free', name: '자유', desc: '', icon: '💬' }]; },
   cinfo(id) { return this.communities().find(c => c.id === id) || { id, name: id, icon: '💬', desc: '' }; },
-  posts() { return Store.get('posts', []); },
-  comments(postId) { return Store.get('comments', []).filter(c => c.postId === postId); },
+  posts() { const b = Auth.blocked(); return Store.get('posts', []).filter(p => !b.has(p.author)); },
+  comments(postId) { const b = Auth.blocked(); return Store.get('comments', []).filter(c => c.postId === postId && !b.has(c.author)); },
   myVotes() { const v = Store.get('votes', {}); return v[App.user()] || {}; },
   setVote(id, dir) {
     const all = Store.get('votes', {}), me = App.user(); all[me] = all[me] || {};
@@ -77,6 +77,47 @@ const Community = {
     this.$('rCommunities').innerHTML = this.communities().map(c => `<button class="r-navbtn ${this.community === c.id ? 'active' : ''}" onclick="Community.pickCommunity('${c.id}')">${c.icon} ${U.esc(c.name)}<span class="muted small">${counts[c.id] || 0}</span></button>`).join('');
     document.querySelectorAll('.r-left .r-nav:first-child .r-navbtn').forEach(b => b.classList.toggle('active', b.dataset.c === this.community));
   },
+  async renderAdmin() {
+    const box = this.$('rAdmin'); if (!Auth.isAdmin() || !(typeof API !== 'undefined' && API.ready)) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden'); box.innerHTML = `<div class="eyebrow">운영</div><p class="small muted">불러오는 중…</p>`;
+    try {
+      const list = await API.reports(); const open = list.filter(r => r.status === 'open');
+      box.innerHTML = `<div class="row between"><div class="eyebrow" style="margin:0">🛡 운영</div><span class="tag ${open.length ? 'red' : ''}">신고 ${open.length}</span></div>
+        <div class="adm-list">${open.length ? open.slice(0, 8).map(r => `
+          <div class="adm-item">
+            <div class="small"><b>${U.esc(r.reason)}</b> · ${{ posts: '글', comments: '댓글', lost: '분실물' }[r.targetType]} · ${U.fmtDate(r.createdAt)}</div>
+            <div class="small muted">${U.esc(r.snapshot.author)}: "${U.esc(r.snapshot.text).slice(0, 50)}"${r.detail ? ` — ${U.esc(r.detail)}` : ''}${r.exists ? '' : ' (이미 삭제됨)'}</div>
+            <div class="row" style="gap:4px;margin-top:4px">
+              ${r.exists ? `<button class="link" onclick="Community.adminOpen('${r.targetType}','${r.targetId}','${r.snapshot.postId || ''}')">보기</button><button class="link" onclick="Community.adminDelete('${r.id}','${r.targetType}','${r.targetId}')">삭제</button>` : ''}
+              <button class="link" onclick="Community.adminBan('${r.id}','${U.esc(r.snapshot.author)}')">작성자 정지</button>
+              <button class="link" onclick="Community.adminResolve('${r.id}','무시')">무시</button></div>
+          </div>`).join('') : '<p class="small muted" style="margin:8px 0 0">처리할 신고가 없습니다.</p>'}</div>
+        <button class="ghost small" style="margin-top:8px" onclick="Community.adminUsers()">사용자 목록·정지 해제</button>`;
+    } catch (e) { box.innerHTML = `<div class="eyebrow">운영</div><p class="small" style="color:var(--error)">${U.esc(e.message)}</p>`; }
+  },
+  adminOpen(type, id, postId) { if (type === 'lost') { App.go('lost'); setTimeout(() => Lost.locate(id), 200); } else App.go('community', type === 'comments' ? postId : id); },
+  async adminDelete(reportId, type, id) {
+    if (!confirm('이 글을 삭제하고 신고를 처리할까요?')) return;
+    if (type === 'comments') Store.update('comments', id, { body: '[운영자가 삭제한 댓글]', deleted: true });
+    else { Store.remove(type, id); if (type === 'posts') Store.set('comments', Store.get('comments', []).filter(c => c.postId !== id)); }
+    try { await API.resolveReport(reportId, '삭제'); } catch { }
+    App.toast('삭제하고 신고를 처리했습니다.'); this.render();
+  },
+  async adminBan(reportId, nick) {
+    if (!confirm(`${nick}님을 정지할까요? 정지되면 글·댓글·분실물을 쓸 수 없습니다.`)) return;
+    try { await API.ban(nick, true); if (reportId) await API.resolveReport(reportId, '정지'); App.toast(`${nick}님을 정지했습니다.`); } catch (e) { App.toast(e.message, 'error'); }
+    this.renderAdmin();
+  },
+  async adminResolve(reportId, action) { try { await API.resolveReport(reportId, action); } catch (e) { App.toast(e.message, 'error'); } this.renderAdmin(); },
+  async adminUsers() {
+    try {
+      const users = await API.users(); const box = this.$('rAdmin');
+      box.innerHTML = `<div class="row between"><div class="eyebrow" style="margin:0">🛡 사용자 ${users.length}</div><button class="link" onclick="Community.renderAdmin()">← 신고로</button></div>
+        <div class="adm-list">${users.map(u => `<div class="adm-item row between" style="gap:6px"><span class="small">${U.esc(u.nickname)} <span class="tag">${u.isAdmin ? '운영자' : u.role === 'teacher' ? '교사' : (u.grade || '') + '학년'}</span>${u.banned ? '<span class="tag red">정지</span>' : ''}</span>
+          ${u.isAdmin ? '' : `<button class="link" onclick="Community.adminToggleBan('${U.esc(u.nickname)}',${!u.banned})">${u.banned ? '정지 해제' : '정지'}</button>`}</div>`).join('')}</div>`;
+    } catch (e) { App.toast(e.message, 'error'); }
+  },
+  async adminToggleBan(nick, banned) { try { await API.ban(nick, banned); App.toast(banned ? `${nick}님을 정지했습니다.` : `${nick}님 정지를 해제했습니다.`); } catch (e) { App.toast(e.message, 'error'); } this.adminUsers(); },
   renderAbout() {
     const c = this.community && !this.community.startsWith('__') ? this.cinfo(this.community) : null;
     const total = this.posts().length, members = new Set(this.posts().map(p => p.author)).size;
@@ -104,7 +145,7 @@ const Community = {
           <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
           <h3 class="r-title">${U.esc(p.title)}</h3>
           <p class="r-preview">${U.esc(p.body).slice(0, 180)}${p.body.length > 180 ? '…' : ''}</p>
-          <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button></div>
+          <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>${p.author !== App.user() ? `<button onclick="event.stopPropagation();Auth.report('posts','${p.id}')">⚑ 신고</button>` : ''}</div>
         </div></article>`;
     }).join('');
   },
@@ -119,7 +160,9 @@ const Community = {
         <div class="r-ctext ${c.deleted ? 'muted' : ''}">${U.md(c.body)}</div>
         <div class="r-cactions">${this.voteBox(c.id, c.score, true)}
           <button onclick="Community.reply('${c.id}')">↩ 답글</button>
-          ${c.author === me && !c.deleted ? `<button onclick="Community.delComment('${c.id}')">삭제</button>` : ''}</div>
+          ${c.author === me && !c.deleted ? `<button onclick="Community.delComment('${c.id}')">삭제</button>` : ''}
+          ${c.author !== me && !c.deleted ? `<button onclick="Auth.report('comments','${c.id}')">⚑ 신고</button>` : ''}
+          ${Auth.isAdmin() && c.author !== me && !c.deleted ? `<button class="adm" onclick="Community.delComment('${c.id}')">🛡 삭제</button>` : ''}</div>
         ${this.replyTo === c.id ? `<form class="r-replyform" onsubmit="Community.comment(event,'${p.id}','${c.id}')"><textarea name="body" rows="2" required placeholder="${U.esc(c.author)}님에게 답글"></textarea><div class="actions" style="margin-top:6px"><button class="primary small">답글 달기</button><button type="button" class="ghost small" onclick="Community.reply(null)">취소</button></div></form>` : ''}
         ${tree(c.id, depth + 1)}
       </div>`).join('');
@@ -132,7 +175,8 @@ const Community = {
           <h2 class="r-title">${U.esc(p.title)}</h2>
           <div class="post-body">${U.md(p.body)}</div>
           <div class="r-actions"><span>💬 댓글 ${all.length}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>
-            ${p.author === me ? `<button onclick="Community.del('${p.id}')">🗑 삭제</button>` : ''}</div>
+            ${p.author === me ? `<button onclick="Community.del('${p.id}')">🗑 삭제</button>` : `<button onclick="Auth.report('posts','${p.id}')">⚑ 신고</button><button onclick="Auth.block('${U.esc(p.author)}')">🚫 ${U.esc(p.author)} 차단</button>`}
+            ${Auth.isAdmin() && p.author !== me ? `<button class="adm" onclick="Community.del('${p.id}')">🛡 운영자 삭제</button>` : ''}</div>
         </div></article>
       <form class="card" style="margin-top:12px" onsubmit="Community.comment(event,'${p.id}',null)">
         <div class="eyebrow">${U.esc(me)}(으)로 댓글 쓰기</div>

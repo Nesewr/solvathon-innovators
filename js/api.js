@@ -77,5 +77,12 @@ const API = {
   async logout() { await this.req('POST', '/api/auth/logout').catch(() => { }); this.token = null; },
   async solve(payload) { return this.req('POST', '/api/solve', payload); },
   async analyze(payload) { return this.req('POST', '/api/activities/analyze', payload); },
+  // 신고·차단·운영
+  async report(targetType, targetId, reason, detail) { return this.req('POST', '/api/reports', { targetType, targetId, reason, detail }); },
+  async reports() { return this.req('GET', '/api/reports'); },
+  async resolveReport(id, action) { return this.req('PATCH', `/api/reports/${id}`, { status: 'resolved', action }); },
+  async ban(nickname, banned) { return this.req('POST', '/api/admin/ban', { nickname, banned }); },
+  async users() { return this.req('GET', '/api/admin/users'); },
+  async block(nickname, block) { return this.req('POST', '/api/auth/block', { nickname, block }); },
   status() { return !this.base ? 'local' : this.ready ? 'online' : this.waking ? 'waking' : 'offline'; }
 };

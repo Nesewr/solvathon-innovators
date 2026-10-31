@@ -32,7 +32,7 @@ const Lost = {
     const form = this.$('lostForm'); form.reset(); form.classList.add('hidden');
     this.$('lostPickLabel').textContent = '아직 선택 안 함'; this.pickMap.update({ selected: null });
   },
-  all() { return Store.get('lost', []); },
+  all() { const b = Auth.blocked(); return Store.get('lost', []).filter(l => !b.has(l.author)); },
   filtered() { const st = this.$('lFilter').value; return this.all().filter(l => !st || l.status === st); },
   render() {
     const pins = this.filtered().filter(l => l.x != null).map(l => ({ id: l.id, floor: l.floor, x: l.x, y: l.y, status: l.status, label: `${l.item}${l.room ? ' · ' + l.room : ''}` }));
@@ -61,7 +61,8 @@ const Lost = {
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${l.status === 'finding' ? `<button class="primary small" onclick="Lost.found('${l.id}')">찾았어요</button>` : `<button class="ghost small" onclick="Lost.reopen('${l.id}')">다시 찾는 중</button>`}
-          ${l.author === me ? `<button class="ghost danger small" onclick="Lost.del('${l.id}')">삭제</button>` : ''}
+          ${l.author === me ? `<button class="ghost danger small" onclick="Lost.del('${l.id}')">삭제</button>` : `<button class="ghost small" onclick="Auth.report('lost','${l.id}')">⚑ 신고</button>`}
+          ${Auth.isAdmin() && l.author !== me ? `<button class="ghost danger small" onclick="Lost.del('${l.id}')">🛡 삭제</button>` : ''}
         </div></div>`).join('');
   },
   locate(id) {

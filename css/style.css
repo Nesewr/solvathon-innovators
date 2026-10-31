@@ -354,3 +354,12 @@ label.check input{width:18px;height:18px;margin:0}
   .hero-in>*,.hero-emblem{opacity:1;animation:none}
   .reveal{opacity:1;transform:none;transition:none}
 }
+
+/* 운영·신고·차단 */
+.tag.admin{background:var(--ink);color:var(--green-pale);border:1px solid var(--primary)}
+.who .tag.admin{background:transparent}
+.r-actions button.adm,.r-cactions button.adm{color:var(--error)}
+.r-admin{border-top:4px solid var(--ink)}
+.adm-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.adm-item{padding:8px;background:var(--soft);border-radius:var(--r)}
+.adm-item .link{font-size:13px}

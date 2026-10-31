@@ -6,7 +6,7 @@
 <title>중산 올인원</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/emblem-180.png">
-<link rel="stylesheet" href="css/style.css?v=10311359">
+<link rel="stylesheet" href="css/style.css?v=10311416">
 </head>
 <body>
 <header class="top">
@@ -244,6 +244,7 @@
         <div id="postDetail" class="hidden"></div>
       </div>
       <aside class="r-right">
+        <div class="card r-admin hidden" id="rAdmin"></div>
         <div class="card r-about" id="rAbout"></div>
         <div class="card" style="margin-top:12px">
           <div class="eyebrow">커뮤니티 규칙</div>
@@ -336,19 +337,34 @@
   </div>
 </div>
 
+<!-- 신고 -->
+<div class="modal hidden" id="report">
+  <div class="modal-box">
+    <h3>신고하기</h3>
+    <p class="small muted">운영자가 확인한 뒤 글을 삭제하거나 작성자를 정지할 수 있습니다. 허위 신고는 제재될 수 있어요.</p>
+    <form id="reportForm">
+      <label>사유
+        <select id="reportReason"><option>실명·학번·개인정보 노출</option><option>욕설·비방·조롱</option><option>광고·도배</option><option>부적절한 내용</option><option>기타</option></select>
+      </label>
+      <label>자세한 내용 (선택) <textarea id="reportDetail" rows="2" maxlength="200" placeholder="어떤 부분이 문제인지 적어 주세요"></textarea></label>
+      <div class="actions"><button class="primary" type="submit">신고 접수</button><button class="ghost" type="button" id="reportClose">취소</button></div>
+    </form>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311359"></script>
-<script src="js/api.js?v=10311359"></script>
-<script src="js/auth.js?v=10311359"></script>
-<script src="js/solver.js?v=10311359"></script>
-<script src="js/notes.js?v=10311359"></script>
-<script src="js/floors.js?v=10311359"></script>
-<script src="js/map.js?v=10311359"></script>
-<script src="js/lost.js?v=10311359"></script>
-<script src="js/home.js?v=10311359"></script>
-<script src="js/activities.js?v=10311359"></script>
-<script src="js/community.js?v=10311359"></script>
+<script src="js/app.js?v=10311416"></script>
+<script src="js/api.js?v=10311416"></script>
+<script src="js/auth.js?v=10311416"></script>
+<script src="js/solver.js?v=10311416"></script>
+<script src="js/notes.js?v=10311416"></script>
+<script src="js/floors.js?v=10311416"></script>
+<script src="js/map.js?v=10311416"></script>
+<script src="js/lost.js?v=10311416"></script>
+<script src="js/home.js?v=10311416"></script>
+<script src="js/activities.js?v=10311416"></script>
+<script src="js/community.js?v=10311416"></script>
 <script>App.init();</script>
 </body>
 </html>

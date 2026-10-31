@@ -8,6 +8,7 @@ const Auth = {
     this.$('demoLoginForm').onsubmit = e => { e.preventDefault(); this.login(this.$('demoEmail').value.trim(), {}).then(r => { if (r) this.$('login').classList.add('hidden'); }); };
     this.$('setupForm').onsubmit = e => this.finishSetup(e);
     this.$('nickRandom').onclick = () => { this.$('setupNick').value = this.randomNick(); };
+    this.$('reportForm').onsubmit = e => this.submitReport(e); this.$('reportClose').onclick = () => this.$('report').classList.add('hidden');
     await this.onOnline();
     const cur = this.current(); if (cur && !cur.setupDone) this.openSetup();
   },
@@ -39,7 +40,28 @@ const Auth = {
     if (/[a-z]/.test(local)) return { email, role: 'teacher' };
     return { error: '학생은 입학년도-학번(예: 26-10302), 선생님은 영문이 포함된 주소여야 합니다.' };
   },
-  roleLabel(p) { return p.role === 'teacher' ? '교사' : `${p.grade}학년`; },
+  roleLabel(p) { return p.isAdmin ? '운영자' : p.role === 'teacher' ? '교사' : `${p.grade}학년`; },
+  isAdmin() { const p = this.current(); return !!(p && p.setupDone && p.isAdmin); },
+  blocked() { const p = this.current(); return new Set((p && p.blocked) || []); },
+  isBlocked(nick) { return this.blocked().has(nick); },
+  async block(nick, block = true) {
+    if (!this.current()) { App.toast('로그인 후 이용할 수 있습니다.', 'error'); return; }
+    if (typeof API !== 'undefined' && API.ready) { try { const d = await API.block(nick, block); const all = this.profiles(); all[d.profile.email] = { ...(all[d.profile.email] || {}), ...d.profile }; Store.setLocal('profiles', all); } catch (e) { App.toast(e.message, 'error'); return; } }
+    else { const p = this.current(); const set = new Set(p.blocked || []); block ? set.add(nick) : set.delete(nick); const all = this.profiles(); all[p.email] = { ...p, blocked: [...set] }; Store.setLocal('profiles', all); }
+    App.toast(block ? `${nick}님의 글과 댓글을 숨깁니다. 설정에서 해제할 수 있어요.` : `${nick}님 차단을 해제했습니다.`); App.rerender();
+  },
+  /* 신고 모달 */
+  report(targetType, targetId) {
+    if (this.gate && this.gate()) return;
+    if (!(typeof API !== 'undefined' && API.ready)) { App.toast('서버 연결 상태에서만 신고할 수 있습니다.', 'error'); return; }
+    const m = document.getElementById('report'); m.classList.remove('hidden'); m.dataset.type = targetType; m.dataset.id = targetId;
+    document.getElementById('reportDetail').value = '';
+  },
+  async submitReport(e) {
+    e.preventDefault(); const m = document.getElementById('report');
+    try { const r = await API.report(m.dataset.type, m.dataset.id, document.getElementById('reportReason').value, document.getElementById('reportDetail').value.trim()); m.classList.add('hidden'); App.toast(r.duplicate ? '이미 신고한 글입니다. 운영자가 확인 중이에요.' : '신고가 접수됐습니다. 운영자가 확인합니다.'); }
+    catch (err) { App.toast('신고 실패: ' + err.message, 'error'); }
+  },
   describe(p) { return (p.role === 'teacher' ? '선생님 계정' : `${p.entryYear}년 입학 · ${p.grade}학년 ${p.klass}반 ${p.number}번`) + (p.track ? ` · 희망 ${this.trackName(p.track)}${p.major ? '(' + p.major + ')' : ''}` : ''); },
   TRACKS: { eng: '공학·자연과학', sw: '컴퓨터·소프트웨어', med: '의학·보건', hum: '인문·사회', biz: '경영·경제', edu: '교육', art: '예체능' },
   trackName(t) { return this.TRACKS[t] || '미정'; },
@@ -128,7 +150,7 @@ const Auth = {
     const p = this.current(), el = this.$('authArea');
     if (p && p.setupDone) {
       el.innerHTML = `<div class="who">${p.picture ? `<img src="${p.picture}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar">${U.esc(p.nickname.slice(0, 1))}</span>`}
-        <span class="nick">${U.esc(p.nickname)}</span><span class="tag green">${this.roleLabel(p)}</span></div>
+        <span class="nick">${U.esc(p.nickname)}</span><span class="tag ${p.isAdmin ? 'admin' : 'green'}">${this.roleLabel(p)}</span></div>
         <button class="icon" title="로그아웃" onclick="Auth.logout()">⎋</button>`;
     } else {
       el.innerHTML = `<button class="ghost small on-dark" onclick="Auth.openLogin()">학교 계정 로그인</button>${this.requireLogin ? '' : '<select id="userSelect" title="데모 계정 전환"></select>'}`;

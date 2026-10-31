@@ -17,9 +17,10 @@ const REQUIRE_LOGIN = ENV('REQUIRE_LOGIN', '0') === '1';   // 1이면 글·댓�
 const ALLOW_DEMO_LOGIN = ENV('ALLOW_DEMO_LOGIN', '1') === '1';
 const ALLOW_RESET = ENV('ALLOW_RESET', '1') === '1';
 const SEED = ENV('SEED', '1') === '1';                      // 0이면 빈 데이터로 시작
+const ADMINS = ENV('ADMIN_EMAILS', '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);   // 운영자 이메일 목록
 
 /* ---------- 저장소: Firestore(서비스 계정이 있으면) 또는 JSON 파일 ---------- */
-const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions', 'analysis'];
+const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions', 'analysis', 'reports'];
 let db = Object.fromEntries(COLS.map(c => [c, {}]));
 let fsdb = null;                                   // Firestore 핸들 (없으면 파일 모드)
 function loadServiceAccount() {
@@ -69,10 +70,13 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
-const user = req => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); const s = t && db.sessions[t]; return s ? db.profiles[s.email] : null; };
+const withAdmin = p => p ? { ...p, isAdmin: ADMINS.includes(String(p.email).toLowerCase()) } : p;
+const user = req => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); const s = t && db.sessions[t]; return s ? withAdmin(db.profiles[s.email]) : null; };
+const isAdmin = req => { const u = user(req); return !!(u && u.isAdmin); };
+const banned = (req, res) => { const u = user(req); if (u && u.banned) { bad(res, 403, '정지된 계정입니다. 운영자에게 문의하세요.'); return true; } return false; };
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, storage: fsdb ? 'firestore' : 'file', ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, googleClientId: GOOGLE_CLIENT_ID || '', demoLogin: ALLOW_DEMO_LOGIN, requireLogin: REQUIRE_LOGIN, allowReset: ALLOW_RESET, counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
+app.get('/api/health', (req, res) => res.json({ ok: true, storage: fsdb ? 'firestore' : 'file', ai: !!GEMINI_KEY, google: !!GOOGLE_CLIENT_ID, googleClientId: GOOGLE_CLIENT_ID || '', demoLogin: ALLOW_DEMO_LOGIN, requireLogin: REQUIRE_LOGIN, allowReset: ALLOW_RESET, admins: ADMINS.length, counts: Object.fromEntries(['posts', 'comments', 'lost', 'notes'].map(c => [c, Object.keys(db[c]).length])) }));
 
 /* ---------- 로그인 ---------- */
 function parseEmail(email) {
@@ -99,7 +103,7 @@ app.post('/api/auth/login', async (req, res) => {
   const prev = db.profiles[p.email] || {};
   const prof = put('profiles', p.email, { ...prev, ...p, ...extra, nickname: prev.nickname || '', setupDone: !!prev.setupDone, subject: prev.subject || '수학', lastLogin: new Date().toISOString() });
   const token = crypto.randomBytes(24).toString('hex'); put('sessions', token, { email: p.email, createdAt: new Date().toISOString() });
-  res.json({ token, profile: prof });
+  res.json({ token, profile: withAdmin(prof) });
 });
 app.post('/api/auth/setup', (req, res) => {
   const u = user(req); if (!u) return bad(res, 401, '로그인이 필요합니다.');
@@ -109,9 +113,17 @@ app.post('/api/auth/setup', (req, res) => {
   if (Object.values(db.profiles).some(x => x.email !== u.email && x.nickname === nick)) return bad(res, 409, '이미 쓰는 닉네임입니다.');
   const track = ['eng', 'sw', 'med', 'hum', 'biz', 'edu', 'art'].includes(req.body.track) ? req.body.track : '', major = String(req.body.major || '').slice(0, 30);
   const prof = put('profiles', u.email, { ...u, nickname: nick, subject: req.body.subject || u.subject, track, major, setupDone: true, setupAt: new Date().toISOString() });
-  res.json({ profile: prof });
+  res.json({ profile: withAdmin(prof) });
 });
 app.get('/api/me', (req, res) => { const u = user(req); u ? res.json({ profile: u }) : bad(res, 401, '로그인 안 됨'); });
+/* 차단 목록(내 화면에서 숨김) */
+app.post('/api/auth/block', (req, res) => {
+  const u = user(req); if (!u) return bad(res, 401, '로그인이 필요합니다.');
+  const nick = String(req.body.nickname || '').trim(); if (!nick || nick === u.nickname) return bad(res, 400, '잘못된 대상');
+  const set = new Set(u.blocked || []); req.body.block === false ? set.delete(nick) : set.add(nick);
+  const { isAdmin: _a, ...plain } = u; const prof = put('profiles', u.email, { ...plain, blocked: [...set] });
+  res.json({ profile: withAdmin(prof) });
+});
 app.post('/api/auth/logout', (req, res) => { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, ''); if (db.sessions[t]) del('sessions', t); res.json({ ok: true }); });
 
 /* ---------- 컬렉션 ---------- */
@@ -135,13 +147,14 @@ app.get('/api/c/:col', (req, res) => {
   res.json(items.map(({ baseScore, ...x }) => x));
 });
 app.put('/api/c/:col/:id', (req, res) => {
-  if (needLogin(req, res)) return;
+  if (needLogin(req, res) || banned(req, res)) return;
   const col = req.params.col, id = req.params.id, data = req.body;
   if (col === 'votes') { const u = user(req); const me = u && u.setupDone ? u.nickname : id; const prevMap = db.votes[me] || {}; put('votes', me, data || {}); recomputeScores(new Set([...Object.keys(prevMap), ...Object.keys(data || {})])); return res.json({ ok: true }); }
   if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   if (!data || data.id !== id) return bad(res, 400, 'id 불일치');
   const me = who(req), prev = db[col][id];
-  if (prev && prev.author !== me && !(col === 'lost' && Object.keys(data).every(k => prev[k] === data[k] || k === 'status'))) return bad(res, 403, '본인 글만 수정할 수 있습니다.');
+  const admin = isAdmin(req);
+  if (prev && prev.author !== me && !admin && !(col === 'lost' && Object.keys(data).every(k => prev[k] === data[k] || k === 'status'))) return bad(res, 403, '본인 글만 수정할 수 있습니다.');
   if (!prev && data.author !== me) return bad(res, 403, '작성자가 일치하지 않습니다.');
   if (col === 'posts' || col === 'comments') { put(col, id, { ...data, baseScore: prev ? (prev.baseScore ?? 0) : 0 }); recomputeScores(new Set([id])); } // 점수는 서버의 투표 합으로만 계산
   else put(col, id, { ...prev, ...data });
@@ -151,9 +164,48 @@ app.delete('/api/c/:col/:id', (req, res) => {
   if (needLogin(req, res)) return;
   const col = req.params.col, id = req.params.id; if (!PUBLIC.includes(col) && !PRIVATE.includes(col)) return bad(res, 404, '없는 컬렉션');
   const prev = db[col][id]; if (!prev) return res.json({ ok: true });
-  const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me) return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
+  const u = user(req), me = u && u.setupDone ? u.nickname : req.query.as; if (prev.author !== me && !isAdmin(req)) return bad(res, 403, '본인 글만 삭제할 수 있습니다.');
   del(col, id); if (col === 'posts') Object.values(db.comments).filter(c => c.postId === id).forEach(c => del('comments', c.id));
   res.json({ ok: true });
+});
+/* ---------- 신고 ---------- */
+const REASONS = ['실명·학번·개인정보 노출', '욕설·비방·조롱', '광고·도배', '부적절한 내용', '기타'];
+app.post('/api/reports', (req, res) => {
+  if (needLogin(req, res) || banned(req, res)) return;
+  const { targetType, targetId, reason = '기타', detail = '' } = req.body || {};
+  if (!['posts', 'comments', 'lost'].includes(targetType) || !db[targetType][targetId]) return bad(res, 404, '신고 대상이 없습니다.');
+  const reporter = who(req); if (!reporter) return bad(res, 401, '로그인이 필요합니다.');
+  const dup = Object.values(db.reports).find(r => r.targetId === targetId && r.reporter === reporter && r.status === 'open');
+  if (dup) return res.json({ ok: true, item: dup, duplicate: true });
+  const t = db[targetType][targetId];
+  const rid = uid();
+  const item = put('reports', rid, { id: rid, createdAt: new Date().toISOString(), targetType, targetId, reason: REASONS.includes(reason) ? reason : '기타', detail: String(detail).slice(0, 200), reporter, status: 'open',
+    snapshot: { author: t.author, text: String(t.title || t.item || t.body || '').slice(0, 120), postId: t.postId || null } });
+  res.json({ ok: true, item });
+});
+app.get('/api/reports', (req, res) => {
+  if (!isAdmin(req)) return bad(res, 403, '운영자만 볼 수 있습니다.');
+  const list = Object.values(db.reports).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1).map(r => ({ ...r, exists: !!db[r.targetType][r.targetId] }));
+  res.json(list);
+});
+app.patch('/api/reports/:id', (req, res) => {
+  if (!isAdmin(req)) return bad(res, 403, '운영자만 처리할 수 있습니다.');
+  const r = db.reports[req.params.id]; if (!r) return bad(res, 404, '없는 신고');
+  const item = put('reports', r.id, { ...r, status: req.body.status === 'open' ? 'open' : 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: user(req).nickname, action: String(req.body.action || '') });
+  res.json({ ok: true, item });
+});
+/* ---------- 운영자: 정지/해제, 사용자 목록 ---------- */
+app.post('/api/admin/ban', (req, res) => {
+  if (!isAdmin(req)) return bad(res, 403, '운영자만 할 수 있습니다.');
+  const nick = String(req.body.nickname || '').trim(); const target = Object.values(db.profiles).find(p => p.nickname === nick);
+  if (!target) return bad(res, 404, '해당 닉네임의 계정이 없습니다.');
+  if (ADMINS.includes(String(target.email).toLowerCase())) return bad(res, 400, '운영자는 정지할 수 없습니다.');
+  const prof = put('profiles', target.email, { ...target, banned: !!req.body.banned, bannedAt: req.body.banned ? new Date().toISOString() : null });
+  res.json({ ok: true, nickname: prof.nickname, banned: !!prof.banned });
+});
+app.get('/api/admin/users', (req, res) => {
+  if (!isAdmin(req)) return bad(res, 403, '운영자만 볼 수 있습니다.');
+  res.json(Object.values(db.profiles).filter(p => p.setupDone).map(p => ({ nickname: p.nickname, role: p.role, grade: p.grade || null, banned: !!p.banned, isAdmin: ADMINS.includes(String(p.email).toLowerCase()), lastLogin: p.lastLogin })));
 });
 app.post('/api/admin/reset', async (req, res) => { if (!ALLOW_RESET) return bad(res, 403, '초기화가 꺼져 있습니다.'); for (const c of ['posts', 'comments', 'lost', 'notes', 'votes']) await clearCol(c); seed(); res.json({ ok: true }); });
 
