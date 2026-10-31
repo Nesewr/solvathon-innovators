@@ -9,7 +9,7 @@
        python3 auto_update.py --force    # 무조건
        python3 auto_update.py --no-fetch # 수집은 건너뛰고 정제·커밋만
        python3 auto_update.py --no-push  # push 생략
-스케줄 등록: ./install_schedule.sh  (매일 07:30 launchd)
+스케줄: GitHub Actions(.github/workflows/riro-update.yml)가 매일 07:30 실행. 맥에서 돌리려면 ./install_schedule.sh
 """
 import argparse, json, os, re, subprocess, sys
 from datetime import date, datetime

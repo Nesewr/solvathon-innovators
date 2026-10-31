@@ -6,3 +6,5 @@ server/.env
 server/db.json
 server/firebase.json
 *.serviceaccount.json
+tools/riro-notifier/data/
+tools/riro-notifier/.browser_profile/
