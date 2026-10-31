@@ -43,7 +43,16 @@ jobs:
           test -n "$RIRO_ID" || { echo "::error::RIRO_ID / RIRO_PW 시크릿이 없습니다"; exit 1; }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set +e
           python tools/riro-notifier/auto_update.py --no-push ${{ inputs.force && '--force' || '' }}
+          code=$?
+          set -e
+          echo "::group::auto_update.log"; cat tools/riro-notifier/data/auto_update.log 2>/dev/null || true; echo "::endgroup::"
+          if [ $code -ne 0 ]; then
+            last=$(grep -E "FAIL|실패|없음" tools/riro-notifier/data/auto_update.log 2>/dev/null | tail -1)
+            echo "::error title=수집 실패::${last:-auto_update.py exit $code}"
+            exit $code
+          fi
       - name: push
         run: |
           git pull --rebase -q origin main || true

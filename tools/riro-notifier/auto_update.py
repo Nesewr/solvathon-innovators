@@ -71,7 +71,8 @@ def sanitize(src: Path, dst: Path) -> bool:
 def run(cmd, cwd):
     r = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
     if r.returncode != 0:
-        log(f"FAIL {' '.join(map(str, cmd))[:80]} :: {(r.stderr or r.stdout).strip()[-300:]}")
+        detail = ((r.stderr or "") + "\n" + (r.stdout or "")).strip()
+        log(f"FAIL {' '.join(map(str, cmd))[:80]} :: {detail[-900:]}")
     return r.returncode == 0
 
 
