@@ -328,7 +328,6 @@ label.check input{width:18px;height:18px;margin:0}
 .hero-links button b{display:inline-block;transition:transform .3s}
 .hero-links button:hover b{transform:scale(1.2) rotate(-6deg)}
 .hero-emblem{animation:rise .9s .3s cubic-bezier(.2,.7,.2,1) both}
-.hero-emblem img{animation:floaty 6s ease-in-out infinite}
 .hero-emblem::before{border:2px dashed var(--primary);opacity:.55;animation:spin-slow 40s linear infinite}
 .hero-emblem::after{content:"";position:absolute;inset:-40px;border-radius:50%;background:radial-gradient(circle,rgba(118,185,0,.22),transparent 62%);z-index:-1;animation:glow 5s ease-in-out infinite}
 .hero-stats b{font-variant-numeric:tabular-nums}
