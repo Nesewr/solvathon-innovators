@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 try { fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n').forEach(l => { const m = l.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; }); } catch { }
 const ENV = (k, d = '') => (process.env[k] ?? d);
 const PORT = +ENV('PORT', 8787), DOMAIN = 'jungsan.hs.kr';
-const GEMINI_KEY = ENV('GEMINI_API_KEY'), GEMINI_MODEL = ENV('GEMINI_MODEL', 'gemini-2.5-flash'), GOOGLE_CLIENT_ID = ENV('GOOGLE_CLIENT_ID');
+const GEMINI_KEY = ENV('GEMINI_API_KEY'), GEMINI_MODEL = ENV('GEMINI_MODEL', 'gemini-flash-latest'), GOOGLE_CLIENT_ID = ENV('GOOGLE_CLIENT_ID');
 const ORIGINS = ENV('ALLOWED_ORIGINS').split(',').map(s => s.trim()).filter(Boolean);
 const DB_FILE = path.resolve(__dirname, ENV('DB_FILE', './db.json'));
 const REQUIRE_LOGIN = ENV('REQUIRE_LOGIN', '0') === '1';   // 1이면 글·댓글·투표·분실물·오답노트 쓰기에 로그인 필수
@@ -145,11 +145,13 @@ async function listModels() {
 }
 async function pickModel(exclude) {
   const names = await listModels();
-  const prefs = [GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'];
-  for (const p of prefs) if (names.includes(p) && p !== exclude) return p;
-  const flash = names.filter(n => /flash/.test(n) && !/lite|8b|tts|image|audio|live|thinking|exp/.test(n) && n !== exclude).sort().reverse();
+  const ex = new Set(exclude || []);
+  const prefs = [GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.5-flash'];
+  for (const p of prefs) if (names.includes(p) && !ex.has(p)) return p;
+  const ok = n => /^gemini/.test(n) && !/tts|image|audio|live|embedding|transcribe|robotics|computer-use|omni|customtools|nano/.test(n) && !ex.has(n);
+  const flash = names.filter(n => ok(n) && /flash/.test(n) && !/preview|exp/.test(n)).sort().reverse();
   if (flash.length) return flash[0];
-  const any = names.filter(n => /^gemini/.test(n) && !/tts|image|audio|live|embedding/.test(n) && n !== exclude).sort().reverse();
+  const any = names.filter(ok).sort().reverse();
   return any[0] || null;
 }
 app.get('/api/ai/models', async (req, res) => {
@@ -178,12 +180,16 @@ app.post('/api/solve', async (req, res) => {
     } finally { clearTimeout(t); }
   };
   try {
-    let model = modelCache.chosen || GEMINI_MODEL, r = await call(model);
-    if (r.status === 404 || r.status === 400) {           // 모델 이름 문제 → 사용 가능한 모델로 재시도
-      const alt = await pickModel(model).catch(() => null);
-      if (alt && alt !== model) { model = alt; r = await call(model); }
+    let model = modelCache.chosen || GEMINI_MODEL, r = await call(model), tried = [model], body = '';
+    for (let i = 0; i < 3 && (r.status === 404 || r.status === 400); i++) {   // 모델 이름/권한 문제 → 대체 모델로 재시도
+      body = await r.text().catch(() => '');
+      const hinted = (body.match(/use\s+models\/([\w.-]+)/i) || [])[1];     // 오류 메시지가 권하는 모델 우선
+      const alt = (hinted && !tried.includes(hinted)) ? hinted : await pickModel(tried).catch(() => null);
+      if (!alt) break;
+      model = alt; tried.push(model); r = await call(model);
     }
-    if (!r.ok) { const body = await r.text().catch(() => ''); return bad(res, 502, `Gemini 오류 ${r.status} (${model}) ${body.slice(0, 200)}`); }
+    if (!r.ok) { if (!body) body = await r.text().catch(() => ''); return bad(res, 502, `Gemini 오류 ${r.status} (${tried.join(' → ')}) ${body.slice(0, 160)}`); }
+    if (tried.length > 1) console.log('[gemini] 모델 대체:', tried.join(' → '));
     modelCache.chosen = model;
     const data = await r.json(); const raw = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
     const out = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); out._model = model; res.json(out);

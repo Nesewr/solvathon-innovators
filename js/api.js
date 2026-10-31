@@ -19,6 +19,10 @@ const API = {
   async req(method, path, body) {
     const r = await fetch(this.base + path, { method, headers: this.headers(!!body), body: body ? JSON.stringify(body) : undefined });
     const data = await r.json().catch(() => ({}));
+    if (r.status === 401 && this.token && !path.startsWith('/api/auth/')) {   // 서버 재시작 등으로 세션이 사라짐
+      this.token = null; Store.setLocal('session', null);
+      if (typeof Auth !== 'undefined') { Auth.renderHeader(); App.toast('세션이 끊겨 다시 로그인해 주세요.', 'error'); Auth.openLogin(); }
+    }
     if (!r.ok) throw Object.assign(new Error(data.error || ('HTTP ' + r.status)), { status: r.status });
     return data;
   },
