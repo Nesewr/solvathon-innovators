@@ -12,7 +12,8 @@ const Solver = {
   render() { this.renderKeyState(); },
   renderKeyState() {
     const s = App.settings(); const el = this.$('keyState');
-    el.textContent = s.apiKey ? `Gemini 연결됨 · ${s.model}` : 'API 키 없음 → 예시 풀이 모드 (⚙ 설정에서 입력)';
+    const serverAI = typeof API !== 'undefined' && API.ready && API.health && API.health.ai;
+    el.textContent = serverAI ? 'AI 준비됨 (서버)' : s.apiKey ? `Gemini 연결됨 · ${s.model}` : 'API 키 없음 → 예시 풀이 모드 (⚙ 설정에서 입력)';
   },
   fillExample() {
     const ex = App.seed && App.seed.example; if (!ex) return;
@@ -41,9 +42,11 @@ const Solver = {
     const box = this.$('solveResult'); box.classList.remove('hidden');
     box.innerHTML = `<div class="result-head"><h3><span class="spinner"></span>AI가 풀고 있어요…</h3></div><p class="muted">보통 5~15초 걸립니다. 사진이 있으면 조금 더 걸려요.</p>`;
     const s = App.settings(); let result, source = 'ai', note;
+    const serverAI = typeof API !== 'undefined' && API.ready && API.health && API.health.ai;
     try {
-      if (!s.apiKey) throw Object.assign(new Error('NO_KEY'), { code: 'NO_KEY' });
-      result = await this.callGemini(s, text, subject, this.image);
+      if (serverAI) result = await API.solve({ text, subject, image: this.image });
+      else if (!s.apiKey) throw Object.assign(new Error('NO_KEY'), { code: 'NO_KEY' });
+      else result = await this.callGemini(s, text, subject, this.image);
     } catch (e) {
       source = 'fallback';
       result = this.fallback(text, subject, tags, e);
@@ -90,6 +93,7 @@ const Solver = {
     let notice;
     if (err.code === 'NO_KEY') notice = 'API 키가 없어 예시 풀이를 보여줍니다. ⚙ 설정에서 Gemini 키를 넣으면 실제 풀이가 나옵니다.';
     else if (err.name === 'AbortError') notice = '응답이 45초 안에 오지 않아 예시 풀이로 대체했습니다.';
+    else if (err.status) notice = `AI 서버 오류(${err.message})로 예시 풀이로 대체했습니다.`;
     else if (err.code === 'HTTP') notice = `AI 서버 오류(${err.status})로 예시 풀이로 대체했습니다. ${err.status === 400 || err.status === 403 ? '키가 맞는지 확인해 주세요.' : ''}`;
     else notice = `AI 응답을 해석하지 못해 예시 풀이로 대체했습니다. (${err.message})`;
     if (isExample || !text) return { ...fb, _notice: notice };

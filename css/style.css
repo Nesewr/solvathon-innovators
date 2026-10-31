@@ -222,3 +222,9 @@ h2.r-title{font-size:22px}
 label.check{flex-direction:row;align-items:center;gap:var(--s2);font-weight:400}
 label.check input{width:18px;height:18px;margin:0}
 @media (max-width:768px){.who .nick{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* 서버 상태 */
+.srv{font-size:12px;font-weight:700;color:var(--ash);white-space:nowrap}
+.srv.online{color:var(--primary)}
+.srv.offline{color:var(--warning)}
+@media (max-width:768px){.srv{display:none}}

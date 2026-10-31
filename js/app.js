@@ -5,17 +5,21 @@ const Store = {
     try { const v = localStorage.getItem(this.prefix + key); return v == null ? def : JSON.parse(v); }
     catch { return def; }
   },
-  set(key, val) {
+  setLocal(key, val) {
     try { localStorage.setItem(this.prefix + key, JSON.stringify(val)); }
     catch (e) { App.toast('저장 공간이 부족합니다. 오래된 사진이 있는 노트를 지워 주세요.', 'error'); }
     document.dispatchEvent(new CustomEvent('store:change', { detail: { key } }));
   },
-  push(key, item) { const arr = this.get(key, []); arr.unshift(item); this.set(key, arr); return item; },
+  set(key, val) {
+    this.setLocal(key, val);
+    if (key === 'votes' && typeof API !== 'undefined') { const me = App.user(); API.setVotes(me, (val || {})[me] || {}); }
+  },
+  push(key, item) { const arr = this.get(key, []); arr.unshift(item); this.setLocal(key, arr); typeof API !== 'undefined' && API.upsert(key, item); return item; },
   update(key, id, patch) {
     const arr = this.get(key, []); const i = arr.findIndex(x => x.id === id);
-    if (i < 0) return null; arr[i] = { ...arr[i], ...patch }; this.set(key, arr); return arr[i];
+    if (i < 0) return null; arr[i] = { ...arr[i], ...patch }; this.setLocal(key, arr); typeof API !== 'undefined' && API.upsert(key, arr[i]); return arr[i];
   },
-  remove(key, id) { this.set(key, this.get(key, []).filter(x => x.id !== id)); },
+  remove(key, id) { this.setLocal(key, this.get(key, []).filter(x => x.id !== id)); typeof API !== 'undefined' && API.remove(key, id); },
   clearAll() { Object.keys(localStorage).filter(k => k.startsWith(this.prefix)).forEach(k => localStorage.removeItem(k)); }
 };
 
@@ -49,8 +53,14 @@ const App = {
 
   async init() {
     try { this.seed = await (await fetch('data/seed.json')).json(); } catch { this.seed = null; }
-    if (!this.settings().seeded && this.seed) this.applySeed();
-    this.bindNav(); this.bindSettings(); this.updateCounts();
+    let config = {}; try { config = await (await fetch('data/config.json')).json(); } catch { }
+    this.config = config;
+    if (typeof API !== 'undefined') await API.init(config);
+    const online = typeof API !== 'undefined' && API.ready;
+    if (!online && !this.settings().seeded && this.seed) this.applySeed();
+    if (online) this.saveSettings({ seeded: true });
+    this.bindNav(); this.bindSettings(); this.updateCounts(); this.renderServerState();
+    document.addEventListener('store:refresh', () => { this.updateCounts(); this.rerender(); });
     if (typeof Auth !== 'undefined') await Auth.init(); else this.renderUsers();
     document.addEventListener('store:change', () => { this.updateCounts(); });
     window.addEventListener('hashchange', () => this.route());
@@ -82,13 +92,21 @@ const App = {
     this.saveSettings({ seeded: true });
   },
 
-  resetDemo() {
-    const keep = this.settings();
+  async resetDemo() {
+    const keep = this.settings(), session = Store.get('session', null), profiles = Store.get('profiles', {});
     Store.clearAll();
-    Store.set('settings', { ...keep, seeded: false });
-    if (this.seed) this.applySeed();
+    Store.setLocal('settings', { ...keep, seeded: false }); Store.setLocal('session', session); Store.setLocal('profiles', profiles);
+    if (typeof API !== 'undefined' && API.ready) { await API.reset(); this.saveSettings({ seeded: true }); }
+    else if (this.seed) this.applySeed();
     this.toast('데모 데이터를 초기화했습니다.');
     this.route(true);
+  },
+  rerender() { const [name] = location.hash.slice(1).split('/'); const tab = this.tabs.includes(name) ? name : 'solver'; const mod = this.modules()[this.tabs.indexOf(tab)]; if (mod && mod.render) mod.render(false); },
+  renderServerState() {
+    const el = document.getElementById('srvState'); if (!el || typeof API === 'undefined') return;
+    const st = API.status(); el.className = 'srv ' + st;
+    el.textContent = st === 'online' ? '● 서버 연결' : st === 'offline' ? '● 서버 없음 · 로컬' : '● 로컬 모드';
+    el.title = st === 'online' ? `서버 ${API.base} 연결됨${API.health && API.health.ai ? ' · AI 키 서버에 있음' : ''}` : '이 브라우저에만 저장됩니다';
   },
 
   bindNav() {
@@ -117,9 +135,9 @@ const App = {
   },
 
   bindSettings() {
-    const modal = document.getElementById('settings'), key = document.getElementById('apiKey'), model = document.getElementById('apiModel'), gcid = document.getElementById('googleClientId');
+    const modal = document.getElementById('settings'), key = document.getElementById('apiKey'), model = document.getElementById('apiModel'), gcid = document.getElementById('googleClientId'), apiBase = document.getElementById('apiBase');
     document.getElementById('settingsBtn').onclick = () => {
-      const s = this.settings(); key.value = s.apiKey || ''; model.value = s.model || 'gemini-2.5-flash'; gcid.value = s.googleClientId || '';
+      const s = this.settings(); key.value = s.apiKey || ''; model.value = s.model || 'gemini-2.5-flash'; gcid.value = s.googleClientId || ''; apiBase.value = s.apiBase || '';
       const p = typeof Auth !== 'undefined' && Auth.current(); const acc = document.getElementById('settingsAccount');
       acc.innerHTML = p && p.setupDone
         ? `<div class="card soft" style="margin-bottom:16px"><div class="eyebrow">내 계정</div><b>${U.esc(p.nickname)}</b> <span class="tag green">${Auth.roleLabel(p)}</span><p class="small muted" style="margin:6px 0 10px">${U.esc(Auth.describe(p))}<br>${U.esc(p.email)}</p><div class="actions" style="margin:0"><button type="button" class="ghost small" onclick="document.getElementById('settings').classList.add('hidden');Auth.openSetup()">닉네임·과목 바꾸기</button><button type="button" class="ghost small danger" onclick="document.getElementById('settings').classList.add('hidden');Auth.logout()">로그아웃</button></div></div>`
@@ -127,7 +145,7 @@ const App = {
       modal.classList.remove('hidden');
     };
     const close = () => {
-      this.saveSettings({ apiKey: key.value.trim(), model: model.value, googleClientId: gcid.value.trim() }); if (typeof Auth !== 'undefined') Auth.clientId = gcid.value.trim() || Auth.clientId; modal.classList.add('hidden');
+      const prevBase = this.settings().apiBase || ''; this.saveSettings({ apiKey: key.value.trim(), model: model.value, googleClientId: gcid.value.trim(), apiBase: apiBase.value.trim() }); if (apiBase.value.trim() !== prevBase) { this.toast('서버 주소를 바꿨습니다. 새로고침합니다.'); setTimeout(() => location.reload(), 600); } if (typeof Auth !== 'undefined') Auth.clientId = gcid.value.trim() || Auth.clientId; modal.classList.add('hidden');
       typeof Solver !== 'undefined' && Solver.renderKeyState();
     };
     document.getElementById('settingsClose').onclick = close;

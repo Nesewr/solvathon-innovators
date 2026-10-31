@@ -8,7 +8,7 @@ const Auth = {
     this.renderHeader();
     this.$('loginClose').onclick = () => this.$('login').classList.add('hidden');
     this.$('login').addEventListener('click', e => { if (e.target === this.$('login')) this.$('login').classList.add('hidden'); });
-    this.$('demoLoginForm').onsubmit = e => { e.preventDefault(); const r = this.login(this.$('demoEmail').value.trim(), {}); if (r) this.$('login').classList.add('hidden'); };
+    this.$('demoLoginForm').onsubmit = e => { e.preventDefault(); this.login(this.$('demoEmail').value.trim(), {}).then(r => { if (r) this.$('login').classList.add('hidden'); }); };
     this.$('setupForm').onsubmit = e => this.finishSetup(e);
     this.$('nickRandom').onclick = () => { this.$('setupNick').value = this.randomNick(); };
     const cur = this.current(); if (cur && !cur.setupDone) this.openSetup();
@@ -32,16 +32,21 @@ const Auth = {
   /* ---------- 세션 / 프로필 ---------- */
   profiles() { return Store.get('profiles', {}); },
   current() { const s = Store.get('session', null); return s ? this.profiles()[s.email] || null : null; },
-  login(email, extra) {
+  async login(email, extra) {
     const p = this.parse(email); if (p.error) { App.toast(p.error, 'error'); return null; }
-    const all = this.profiles(); const prev = all[p.email] || {};
-    all[p.email] = { ...prev, ...p, googleName: extra.name || prev.googleName || '', picture: extra.picture || prev.picture || '', lastLogin: new Date().toISOString(), setupDone: !!prev.setupDone, nickname: prev.nickname || '' };
-    Store.set('profiles', all); Store.set('session', { email: p.email });
+    const all = this.profiles(); const prev = all[p.email] || {}; let token = null, server = null;
+    if (typeof API !== 'undefined' && API.ready) {
+      try { const d = await API.login(extra.credential ? { credential: extra.credential } : { email: p.email }); token = d.token; server = d.profile; }
+      catch (e) { App.toast('서버 로그인 실패: ' + e.message, 'error'); return null; }
+    }
+    all[p.email] = { ...prev, ...p, ...(server || {}), googleName: extra.name || (server && server.googleName) || prev.googleName || '', picture: extra.picture || (server && server.picture) || prev.picture || '', lastLogin: new Date().toISOString(), setupDone: !!(server ? server.setupDone : prev.setupDone), nickname: (server && server.nickname) || prev.nickname || '' };
+    Store.setLocal('profiles', all); Store.setLocal('session', { email: p.email, token });
     this.renderHeader();
+    if (typeof API !== 'undefined' && API.ready) API.pullAll();
     if (!all[p.email].setupDone) this.openSetup(); else { App.toast(`${all[p.email].nickname}님, 다시 오셨네요!`); App.route(true); }
     return all[p.email];
   },
-  logout() { Store.set('session', null); this.renderHeader(); App.toast('로그아웃했습니다. 데모 계정으로 전환됩니다.'); App.route(true); },
+  async logout() { if (typeof API !== 'undefined' && API.ready) await API.logout(); Store.setLocal('session', null); this.renderHeader(); App.toast('로그아웃했습니다. 데모 계정으로 전환됩니다.'); if (typeof API !== 'undefined' && API.ready) API.pullAll(); App.route(true); },
 
   /* ---------- 초기 설정 ---------- */
   openSetup() {
@@ -54,15 +59,16 @@ const Auth = {
     this.$('setupSubject').value = p.subject || (p.role === 'teacher' ? '수학' : '수학');
     this.$('setup').classList.remove('hidden'); this.$('setupNick').focus();
   },
-  finishSetup(e) {
+  async finishSetup(e) {
     e.preventDefault(); const p = this.current(); if (!p) return;
     const nick = this.$('setupNick').value.trim();
     if (nick.length < 2 || nick.length > 12) { App.toast('닉네임은 2~12자로 해주세요.', 'error'); return; }
     if (/^\d{2}-?\d{5}$|^\d{5}$/.test(nick)) { App.toast('학번은 닉네임으로 쓸 수 없습니다.', 'error'); return; }
     const taken = Object.values(this.profiles()).some(x => x.email !== p.email && x.nickname === nick);
     if (taken) { App.toast('이미 쓰는 닉네임입니다.', 'error'); return; }
+    if (typeof API !== 'undefined' && API.ready) { try { await API.setup({ nickname: nick, subject: this.$('setupSubject').value }); } catch (e) { App.toast(e.message, 'error'); return; } }
     const all = this.profiles(); all[p.email] = { ...p, nickname: nick, subject: this.$('setupSubject').value, setupDone: true, setupAt: new Date().toISOString() };
-    Store.set('profiles', all); this.$('setup').classList.add('hidden'); this.renderHeader();
+    Store.setLocal('profiles', all); if (typeof API !== 'undefined' && API.ready) API.pullAll(); this.$('setup').classList.add('hidden'); this.renderHeader();
     if (typeof Solver !== 'undefined') { const sel = document.getElementById('qSubject'); if (sel) sel.value = all[p.email].subject; }
     App.toast(`환영합니다, ${nick}님!`); App.route(true);
   },
@@ -86,8 +92,7 @@ const Auth = {
     try {
       const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(r.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))));
       if (!payload.email_verified) throw new Error('이메일이 확인되지 않은 계정입니다.');
-      const p = this.login(payload.email, { name: payload.name, picture: payload.picture });
-      if (p) this.$('login').classList.add('hidden');
+      this.login(payload.email, { name: payload.name, picture: payload.picture, credential: r.credential }).then(p => { if (p) this.$('login').classList.add('hidden'); });
     } catch (e) { App.toast('Google 로그인 처리 실패: ' + e.message, 'error'); }
   },
 
