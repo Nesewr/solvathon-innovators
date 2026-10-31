@@ -5,8 +5,9 @@ const API = {
     const s = App.settings(); const local = ['localhost', '127.0.0.1'].includes(location.hostname);
     this.base = (s.apiBase || (local && config.apiBaseLocal) || config.apiBase || '').replace(/\/$/, '');
     this.token = (Store.get('session', null) || {}).token || null;
-    if (!this.base) return false;
+    if (!this.base) { this.initDone = true; return false; }
     this.ready = await this.tryHealth(4000);
+    this.initDone = true;
     if (this.ready) { await this.pullAll(); this.startPolling(); }
     else this.reconnect();            // 잠든 서버 깨우기: 백그라운드로 계속 시도
     return this.ready;
@@ -31,7 +32,7 @@ const API = {
         document.dispatchEvent(new CustomEvent('api:online'));
         return;
       }
-      if (i === plan.length - 1) { this.waking = false; App.renderServerState && App.renderServerState(); }   // 표시는 '서버 없음'으로, 시도는 계속
+      if (i === plan.length - 1) { this.waking = false; App.renderServerState && App.renderServerState(); document.dispatchEvent(new CustomEvent('store:refresh')); }   // 표시는 '서버 없음'으로, 시도는 계속
       await sleep(Math.max(1500, (i >= plan.length - 1 ? 60000 : interval) - (Date.now() - t0)));
     }
   },
@@ -47,6 +48,10 @@ const API = {
     if (!r.ok) throw Object.assign(new Error(data.error || ('HTTP ' + r.status)), { status: r.status });
     return data;
   },
+  pulledOnce: false,
+  // 서버가 설정돼 있고 아직 첫 데이터를 못 받았으면 true (옛 캐시 대신 '불러오는 중' 표시)
+  initDone: false,
+  loading() { return !this.initDone || (!!this.base && !this.pulledOnce && this.status() !== 'offline'); },
   async pullAll() {
     const as = encodeURIComponent(this.me());
     const cols = [...this.PUBLIC, ...this.PRIVATE];
@@ -56,7 +61,8 @@ const API = {
     if (this.token) { try { const me = await this.req('GET', '/api/me'); const sess = Store.get('session', null); if (me.profile && sess) { const all = Store.get('profiles', {}); const prev = all[sess.email] || {}; if (JSON.stringify(prev) !== JSON.stringify({ ...prev, ...me.profile })) { all[sess.email] = { ...prev, ...me.profile }; Store.setLocal('profiles', all); typeof Auth !== 'undefined' && Auth.renderHeader(); if (me.profile.banned) { App.route(); } changed = true; } } } catch { } }
     const votes = await this.req('GET', `/api/c/votes?as=${as}`).catch(() => null);
     if (votes) { const all = Store.get('votes', {}); const mine = votes[this.me()] || {}; if (JSON.stringify(all[this.me()] || {}) !== JSON.stringify(mine)) { all[this.me()] = mine; Store.setLocal('votes', all); changed = true; } }
-    if (changed) document.dispatchEvent(new CustomEvent('store:refresh'));
+    const first = !this.pulledOnce; this.pulledOnce = true;
+    if (changed || first) document.dispatchEvent(new CustomEvent('store:refresh'));
   },
   startPolling() {
     clearInterval(this.pollTimer); this.fails = 0;

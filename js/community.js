@@ -80,8 +80,9 @@ const Community = {
       <button class="${v === -1 ? 'down' : ''}" onclick="Community.vote(event,'${id}',-1)" title="비추천">▼</button></div>`;
   },
   renderSidebar() {
+    const loading = typeof API !== 'undefined' && API.loading();
     const counts = {}; this.posts().forEach(p => counts[p.community] = (counts[p.community] || 0) + 1);
-    this.$('rCommunities').innerHTML = this.communities().map(c => `<button class="r-navbtn ${this.community === c.id ? 'active' : ''}" onclick="Community.pickCommunity('${c.id}')">${c.icon} ${U.esc(c.name)}<span class="muted small">${counts[c.id] || 0}</span></button>`).join('');
+    this.$('rCommunities').innerHTML = this.communities().map(c => `<button class="r-navbtn ${this.community === c.id ? 'active' : ''}" onclick="Community.pickCommunity('${c.id}')">${c.icon} ${U.esc(c.name)}<span class="muted small">${loading ? '…' : (counts[c.id] || 0)}</span></button>`).join('');
     document.querySelectorAll('.r-left .r-nav:first-child .r-navbtn').forEach(b => b.classList.toggle('active', b.dataset.c === this.community));
   },
   async renderAdmin() {
@@ -138,6 +139,7 @@ const Community = {
          <button class="primary" style="width:100%" onclick="document.getElementById('postNewBtn').click()">글쓰기</button>`;
   },
   renderList() {
+    if (typeof API !== 'undefined' && API.loading()) { this.$('postList').classList.remove('hidden'); this.$('postList').innerHTML = `<div class="empty loading"><span class="spinner"></span>서버에서 불러오는 중…</div>`; return; }
     const q = this.$('rSearch').value.trim().toLowerCase(), c = this.community;
     let list = this.posts().filter(p => (!c || c.startsWith('__') || p.community === c) && (!q || (p.title + ' ' + p.body).toLowerCase().includes(q)));
     const sortBar = this.$('rSort');

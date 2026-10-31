@@ -49,6 +49,8 @@ const Home = {
         <button class="primary" onclick="Auth.openLogin()">학교 계정 로그인</button>`;
     }
     const cinfo = id => (typeof Community !== 'undefined' ? Community.cinfo(id) : { icon: '', name: id });
+    const loading = typeof API !== 'undefined' && API.loading();
+    if (loading) { this.$('homePosts').innerHTML = this.$('homeLost').innerHTML = `<div class="empty loading"><span class="spinner"></span>서버에서 불러오는 중…</div>`; return; }
     this.$('homePosts').innerHTML = posts.length ? posts.slice(0, 5).map(x => `
       <button class="home-item" onclick="App.go('community','${x.id}')">
         <span class="tag">${cinfo(x.community).icon} ${U.esc(cinfo(x.community).name)}</span>

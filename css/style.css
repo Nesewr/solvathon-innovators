@@ -383,3 +383,5 @@ label.check input{width:18px;height:18px;margin:0}
 .notice-strip .t{font-weight:700;flex:1}
 
 .r-rank{display:grid;place-items:center;min-width:34px;background:var(--ink);color:var(--green-pale);font-weight:900;font-size:16px}
+
+.empty.loading{padding:28px;color:var(--mute);display:flex;align-items:center;justify-content:center;gap:8px}

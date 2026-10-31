@@ -44,6 +44,7 @@ const Lost = {
     this.renderList();
   },
   renderList() {
+    if (typeof API !== 'undefined' && API.loading()) { this.$('lostFilterLabel').textContent = ''; this.$('lostList').innerHTML = `<div class="empty loading"><span class="spinner"></span>서버에서 불러오는 중…</div>`; return; }
     const me = App.user(), a = this.activeId;
     const list = this.filtered().filter(l => !a || l.id === a);
     const act = a && this.all().find(l => l.id === a);

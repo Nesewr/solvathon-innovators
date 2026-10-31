@@ -16,6 +16,7 @@ const Notes = {
     sel.innerHTML = `<option value="">모든 과목</option>` + subs.map(s => `<option ${s === cur ? 'selected' : ''}>${U.esc(s)}</option>`).join('');
   },
   renderList() {
+    if (typeof API !== 'undefined' && API.loading()) { this.$('nDue').textContent = ''; this.$('notesList').innerHTML = `<div class="empty loading"><span class="spinner"></span>서버에서 불러오는 중…</div>`; return; }
     const sub = this.$('nSubjectFilter').value, q = this.$('nSearch').value.trim().toLowerCase();
     const list = this.all().filter(n => (!sub || n.subject === sub) && (!q || (n.question + ' ' + n.tags.join(' ') + ' ' + (n.concept || '')).toLowerCase().includes(q)));
     const el = this.$('notesList');
