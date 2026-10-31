@@ -34,7 +34,13 @@ const Community = {
   },
 
   // ----- 데이터 -----
-  communities() { return (App.seed && App.seed.communities) || [{ id: 'free', name: '자유', desc: '', icon: '💬' }]; },
+  COMMUNITIES: [
+    { id: 'study', name: '공부·입시', desc: '내신, 모의고사, 공부법, 입시 정보를 나누는 곳', icon: '📚' },
+    { id: 'qna', name: '질문', desc: '모르는 문제, 학교 생활 궁금한 것 무엇이든', icon: '❓' },
+    { id: 'school', name: '학교생활', desc: '급식, 행사, 동아리, 학교 소식', icon: '🏫' },
+    { id: 'free', name: '자유', desc: '가벼운 이야기, 추천, 잡담', icon: '💬' }
+  ],
+  communities() { return this.COMMUNITIES; },
   cinfo(id) { return this.communities().find(c => c.id === id) || { id, name: id, icon: '💬', desc: '' }; },
   posts() { const b = Auth.blocked(); return Store.get('posts', []).filter(p => !b.has(p.author)); },
   comments(postId) { const b = Auth.blocked(); return Store.get('comments', []).filter(c => c.postId === postId && !b.has(c.author)); },
