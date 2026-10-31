@@ -19,7 +19,7 @@ const ALLOW_RESET = ENV('ALLOW_RESET', '1') === '1';
 const SEED = ENV('SEED', '1') === '1';                      // 0이면 빈 데이터로 시작
 
 /* ---------- 저장소: Firestore(서비스 계정이 있으면) 또는 JSON 파일 ---------- */
-const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions'];
+const COLS = ['posts', 'comments', 'lost', 'notes', 'votes', 'profiles', 'sessions', 'analysis'];
 let db = Object.fromEntries(COLS.map(c => [c, {}]));
 let fsdb = null;                                   // Firestore 핸들 (없으면 파일 모드)
 function loadServiceAccount() {
@@ -222,6 +222,49 @@ app.post('/api/solve', async (req, res) => {
     const data = await r.json(); const raw = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
     const out = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); out._model = model; res.json(out);
   } catch (e) { bad(res, 502, 'Gemini 호출 실패: ' + e.message); }
+});
+
+/* ---------- 생기부 활동 AI 분석 (희망 계열 기준, 결과 캐시) ---------- */
+const analysisCache = {};   // key(track|major) → { at, items }
+async function geminiJSON(prompt, maxTokens) {
+  const models = [GEMINI_MODEL, 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest'];
+  let lastErr = '';
+  for (const model of [...new Set(models)]) {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 40000);
+    try {
+      const r = await fetch(`${G}/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: maxTokens || 4096 } })
+      });
+      if (!r.ok) { lastErr = `${model}: ${r.status}`; continue; }
+      const data = await r.json(); const raw = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+      return { model, json: JSON.parse(raw.replace(/^```json|```$/g, '').trim()) };
+    } catch (e) { lastErr = `${model}: ${e.message}`; } finally { clearTimeout(t); }
+  }
+  throw new Error(lastErr || '모델 없음');
+}
+app.post('/api/activities/analyze', async (req, res) => {
+  if (needLogin(req, res)) return;
+  if (!GEMINI_KEY) return bad(res, 503, '서버에 Gemini 키가 없습니다.');
+  const { track = '', major = '', items = [] } = req.body || {};
+  if (!Array.isArray(items) || !items.length) return bad(res, 400, '활동 목록이 비어 있습니다.');
+  const key = `${track}|${major}`.toLowerCase();
+  const cached = analysisCache[key] || (db.analysis && db.analysis[key]);
+  if (cached && Date.now() - new Date(cached.at) < 864e5 && cached.ids === items.map(i => i.id).join(',')) return res.json({ cached: true, ...cached });
+  const trackName = { eng: '공학·자연과학', sw: '컴퓨터·소프트웨어', med: '의학·보건', hum: '인문·사회', biz: '경영·경제', edu: '교육', art: '예체능' }[track] || '미정';
+  const list = items.slice(0, 60).map(i => `- id=${i.id} | ${i.title} | 분류:${i.category || ''} | 생기부:${(i.record || []).join('/')} | 대상:${(i.grades || []).join(',') || '전체'} | ${String(i.summary || i.info || '').slice(0, 120)}`).join('\n');
+  const prompt = ['너는 한국 고등학교 진로진학 상담 교사다. 학생의 희망 계열에 맞춰 아래 학교 활동들이 학교생활기록부(생기부)에 실제로 도움이 되는지 판정하라.',
+    `학생 희망 계열: ${trackName}${major ? ` (희망 학과·직업: ${major})` : ''}`,
+    '각 활동에 대해 JSON 배열로만 답하라: [{"id":"...","score":0~100 정수,"recommend":true/false,"reason":"이 학생에게 도움이 되는/안 되는 이유 1문장","tip":"참여한다면 생기부에 남기기 위한 준비·기록 팁 1문장"}]',
+    '기준: 희망 계열과의 관련성, 생기부 기록 영역(진로/교과세특/자율/동아리/봉사), 활동의 깊이(단순 안내문·행정 공지는 낮게). 한국어, 간결하게.',
+    '활동 목록:', list].join('\n');
+  try {
+    const { model, json } = await geminiJSON(prompt, 6000);
+    const arr = Array.isArray(json) ? json : (json.items || json.results || []);
+    const out = { at: new Date().toISOString(), model, track, major, ids: items.map(i => i.id).join(','), items: arr.map(x => ({ id: String(x.id), score: Math.max(0, Math.min(100, +x.score || 0)), recommend: !!x.recommend, reason: String(x.reason || '').slice(0, 200), tip: String(x.tip || '').slice(0, 200) })) };
+    analysisCache[key] = out; if (!db.analysis) db.analysis = {}; put('analysis', key.replace(/[\/]/g, '_') || 'default', out);
+    res.json({ cached: false, ...out });
+  } catch (e) { bad(res, 502, 'AI 분석 실패: ' + e.message); }
 });
 
 app.get('/', (req, res) => res.type('text').send('중산 올인원 API. /api/health 확인'));

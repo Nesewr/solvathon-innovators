@@ -11,7 +11,20 @@ const Activities = {
     art: ['미술', '음악', '체육', '디자인', '공연', '연주', '밴드', '스포츠', '사진', '영상', '축제', '무용', '연극', '오케스트라']
   },
   profile() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? p : null; },
-  profileChanged() { this.renderList(); },
+  profileChanged() { this.ai = null; this.renderList(); },
+  async analyze() {
+    if (typeof Auth !== 'undefined' && Auth.gate()) return;
+    const serverAI = typeof API !== 'undefined' && API.ready && API.health && API.health.ai;
+    if (!serverAI) { App.toast('AI 서버가 준비되지 않아 지금은 규칙 기반 점수만 보여줍니다.', 'error'); return; }
+    const p = this.profile(); const btn = this.$('aAnalyze'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>분석 중… (10~30초)';
+    try {
+      const items = this.data.activities.map(a => ({ id: a.id, title: a.title, category: a.category, record: a.record, grades: a.grades, summary: a.summary, info: a.info }));
+      const r = await API.analyze({ track: (p && p.track) || '', major: (p && p.major) || '', items });
+      this.ai = Object.fromEntries(r.items.map(x => [x.id, x])); this.aiMeta = r;
+      App.toast(r.cached ? 'AI 분석 결과(캐시)를 불러왔습니다.' : `AI 분석 완료 (${r.model})`); this.renderList();
+    } catch (e) { App.toast('AI 분석 실패: ' + e.message, 'error'); }
+    btn.disabled = false; btn.innerHTML = '✦ AI 분석';
+  },
   /* 진로 적합 점수 0~100과 근거 */
   fit(a) {
     const p = this.profile(), reasons = []; let score = 40;
@@ -27,10 +40,14 @@ const Activities = {
     if (p && p.grade && a.grades && a.grades.includes(p.grade)) { score += 5; reasons.push(`${p.grade}학년 대상`); }
     const d = this.dday(a.deadline); if (a.status !== '마감' && d != null && d >= 0 && d <= 14) { score += 5; reasons.push(`마감 ${d === 0 ? '오늘' : 'D-' + d}`); }
     if (a.participatory) score += 5;
-    return { score: Math.min(100, score), reasons };
+    const ai = this.ai && this.ai[a.id];
+    if (ai) { score = Math.round(score * 0.4 + ai.score * 0.6); if (ai.recommend) reasons.unshift('AI 추천'); }
+    return { score: Math.min(100, score), reasons, ai };
   },
+  ai: null,   // { id → {score, recommend, reason, tip} }
   init() {
     this.$ = id => document.getElementById(id);
+    this.$('aAnalyze').onclick = () => this.analyze();
     ['aGrade', 'aRecord', 'aCat', 'aSort'].forEach(id => this.$(id).onchange = () => this.renderList());
     this.$('aOpen').onchange = () => this.renderList(); this.$('aSearch').oninput = () => this.renderList();
   },
@@ -56,7 +73,7 @@ const Activities = {
     const p = this.profile(), fits = new Map(list.map(a => [a.id, this.fit(a)]));
     const sortMode = this.$('aSort').value;
     if (sortMode === 'fit') list.sort((x, y) => (fits.get(y.id).score - fits.get(x.id).score) || (key(x) - key(y))); else list.sort((x, y) => key(x) - key(y));
-    this.$('aTrackHint').innerHTML = p && p.track ? `<b>${U.esc(p.nickname)}</b>님의 희망 계열 <b>${U.esc(Auth.trackName(p.track))}</b>${p.major ? ` · ${U.esc(p.major)}` : ''} 기준으로 적합 점수를 매겼습니다. <button class="link" onclick="Auth.openSetup()">진로 바꾸기</button>`
+    this.$('aTrackHint').innerHTML = p && p.track ? `<b>${U.esc(p.nickname)}</b>님의 희망 계열 <b>${U.esc(Auth.trackName(p.track))}</b>${p.major ? ` · ${U.esc(p.major)}` : ''} 기준으로 적합 점수를 매겼습니다.${this.ai ? ` AI 분석 반영됨(${this.aiMeta && this.aiMeta.cached ? '캐시' : this.aiMeta.model}).` : ' "AI 분석"을 누르면 Gemini가 활동별 추천 이유와 팁을 더합니다.'} <button class="link" onclick="Auth.openSetup()">진로 바꾸기</button>`
       : p ? `희망 계열을 설정하면 내 진로에 맞는 활동이 위로 올라옵니다. <button class="link" onclick="Auth.openSetup()">진로 설정하기</button>` : '로그인 후 희망 계열을 설정하면 내 진로에 맞는 활동이 위로 올라옵니다.';
     const el = this.$('aList'); this.$('aCount').textContent = `${list.length}건`;
     if (!list.length) { el.innerHTML = '<div class="empty">조건에 맞는 활동이 없어요. "진행 중만" 체크를 풀면 지난 활동도 보입니다.</div>'; return; }
@@ -72,6 +89,7 @@ const Activities = {
           <div class="meta">${a.grades && a.grades.length ? `<span>${a.grades.map(x => x + '학년').join('·')}</span>` : '<span>전 학년</span>'}${a.deadline ? `<span>마감 ${U.esc(a.deadline)}</span>` : ''}${a.courses ? `<span>${a.courses.length}개 강좌</span>` : ''}</div>
           ${a.summary ? `<p class="small" style="margin:6px 0 0">${U.esc(a.summary).slice(0, 160)}</p>` : a.info ? `<p class="small muted" style="margin:6px 0 0">${U.esc(a.info).slice(0, 140)}</p>` : ''}
           ${f.reasons.length ? `<p class="small fit-why">✓ ${f.reasons.map(r => U.esc(r)).join(' · ')}</p>` : ''}
+          ${f.ai ? `<div class="ai-box"><b>✦ AI</b> ${U.esc(f.ai.reason)}${f.ai.tip ? `<br><span class="muted">팁:</span> ${U.esc(f.ai.tip)}` : ''}</div>` : ''}
         </div>
         <div><a class="ghost small" style="display:inline-flex;align-items:center;text-decoration:none" href="${U.esc(a.url)}" target="_blank" rel="noopener">리로스쿨 ↗</a></div></div>`;
     }).join('');

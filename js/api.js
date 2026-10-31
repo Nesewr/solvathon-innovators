@@ -47,5 +47,6 @@ const API = {
   async setup(body) { return this.req('POST', '/api/auth/setup', body); },
   async logout() { await this.req('POST', '/api/auth/logout').catch(() => { }); this.token = null; },
   async solve(payload) { return this.req('POST', '/api/solve', payload); },
+  async analyze(payload) { return this.req('POST', '/api/activities/analyze', payload); },
   status() { return !this.base ? 'local' : this.ready ? 'online' : 'offline'; }
 };
