@@ -8,16 +8,20 @@ const Community = {
       for (const f of [...e.target.files].slice(0, 2 - this.photos.length)) { try { this.photos.push(await U.resizeImage(f)); } catch (err) { App.toast(err.message, 'error'); } }
       this.renderPhotoPick(); e.target.value = '';
     };
-    this.$('postNewBtn').onclick = () => { if (Auth.gate()) return; form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
+    this.$('postNewBtn').onclick = () => { if (Auth.gate()) return; this.fillCommunitySelect(); form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
     this.$('postCancel').onclick = () => { form.reset(); form.classList.add('hidden'); };
     this.$('rSearch').oninput = () => this.renderList();
     this.$('rSort').querySelectorAll('button').forEach(b => b.onclick = () => { this.sort = b.dataset.s; this.renderList(); });
-    this.$('rCommunitySelect').innerHTML = this.communities().map(c => `<option value="${c.id}">${c.icon} ${U.esc(c.name)}</option>`).join('');
+    this.fillCommunitySelect();
     form.onsubmit = e => {
       e.preventDefault(); const f = new FormData(form);
       const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), images: this.photos.slice(0, 2), score: 1 });
       this.setVote(p.id, 1); form.reset(); form.classList.add('hidden'); this.photos = []; this.renderPhotoPick(); App.toast('글을 올렸습니다.'); App.go('community', p.id);
     };
+  },
+  fillCommunitySelect() {
+    const sel = this.$('rCommunitySelect'), list = this.communities();
+    if (sel.options.length !== list.length) { const cur = sel.value; sel.innerHTML = list.map(c => `<option value="${c.id}">${c.icon} ${U.esc(c.name)}</option>`).join(''); if (cur && list.some(c => c.id === cur)) sel.value = cur; }
   },
   renderPhotoPick() { this.$('postPhotoPreview').innerHTML = this.photos.map((src, i) => `<span><img src="${src}" alt=""><button type="button" class="link" onclick="Community.photos.splice(${i},1);Community.renderPhotoPick()">제거</button></span>`).join(''); },
   togglePin(id) { const p = this.posts().find(x => x.id === id); if (!p || !Auth.isAdmin()) return; Store.update('posts', id, { pinned: !p.pinned, pinnedAt: !p.pinned ? new Date().toISOString() : null }); App.toast(!p.pinned ? '공지로 고정했습니다.' : '고정을 해제했습니다.'); this.renderDetail(); },
@@ -80,6 +84,7 @@ const Community = {
       <button class="${v === -1 ? 'down' : ''}" onclick="Community.vote(event,'${id}',-1)" title="비추천">▼</button></div>`;
   },
   renderSidebar() {
+    this.fillCommunitySelect();
     const loading = typeof API !== 'undefined' && API.loading();
     const counts = {}; this.posts().forEach(p => counts[p.community] = (counts[p.community] || 0) + 1);
     this.$('rCommunities').innerHTML = this.communities().map(c => `<button class="r-navbtn ${this.community === c.id ? 'active' : ''}" onclick="Community.pickCommunity('${c.id}')">${c.icon} ${U.esc(c.name)}<span class="muted small">${loading ? '…' : (counts[c.id] || 0)}</span></button>`).join('');
