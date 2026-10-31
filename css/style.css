@@ -301,7 +301,10 @@ label.check input{width:18px;height:18px;margin:0}
 .ghost.on-dark-btn{color:var(--on-dark);border-color:var(--primary)}
 .ghost.on-dark-btn:hover{background:rgba(118,185,0,.15)}
 
-/* 학교 로고 */
-.logo-school{display:inline-flex;align-items:center;height:36px;padding:0 8px;background:#fff;border-radius:var(--r)}
-.logo-school img{height:28px;width:auto;display:block}
-@media (max-width:768px){.brand span:last-child{display:none}.logo-school img{height:26px}}
+/* 학교 교표 */
+.brand .emblem{width:40px;height:40px;border-radius:50%;background:#fff;display:block}
+.hero-emblem{position:relative;display:grid;place-items:center;width:360px;height:360px}
+.hero-emblem::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--primary);opacity:.6}
+.hero-emblem::after{content:"";position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,rgba(118,185,0,.25),transparent 70%)}
+.hero-emblem img{position:relative;width:300px;height:300px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px #fff}
+@media (max-width:768px){.brand span:last-child{display:none}.brand .emblem{width:36px;height:36px}}
