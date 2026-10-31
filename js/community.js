@@ -127,6 +127,7 @@ const Community = {
   async adminToggleBan(nick, banned) { try { await API.ban(nick, banned); App.toast(banned ? `${nick}님을 정지했습니다.` : `${nick}님 정지를 해제했습니다.`); } catch (e) { App.toast(e.message, 'error'); } this.adminUsers(); },
   renderAbout() {
     const c = this.community && !this.community.startsWith('__') ? this.cinfo(this.community) : null;
+    if (this.community === '__hot') { const total = this.posts().length, members = new Set(this.posts().map(p => p.author)).size; this.$('rAbout').innerHTML = `<div class="eyebrow">이번 주 인기</div><h3>🔥 추천 TOP</h3><p class="small muted" style="margin:8px 0">최근 7일 동안 올라온 글 가운데 추천을 많이 받은 순서입니다. 공지는 제외.</p><div class="r-stats"><div><b>${total}</b><span>글</span></div><div><b>${members}</b><span>참여자</span></div></div>`; return; }
     const total = this.posts().length, members = new Set(this.posts().map(p => p.author)).size;
     this.$('rAbout').innerHTML = c
       ? `<div class="eyebrow">게시판 소개</div><h3>${c.icon} ${U.esc(c.name)}</h3><p class="small muted" style="margin:8px 0">${U.esc(c.desc)}</p>
@@ -139,14 +140,26 @@ const Community = {
   renderList() {
     const q = this.$('rSearch').value.trim().toLowerCase(), c = this.community;
     let list = this.posts().filter(p => (!c || c.startsWith('__') || p.community === c) && (!q || (p.title + ' ' + p.body).toLowerCase().includes(q)));
-    if (c === '__hot') { this.sort = 'hot'; }
-    this.$('rSort').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.s === this.sort));
+    const sortBar = this.$('rSort');
+    if (c === '__hot') {   // 이번 주 인기: 최근 7일 글을 추천순으로, 정렬 탭 대신 안내
+      const week = Date.now() - 7 * 864e5;
+      list = list.filter(p => new Date(p.createdAt) >= week && !p.pinned).sort((a, b) => (b.score || 0) - (a.score || 0) || (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 20);
+      sortBar.innerHTML = '<span class="small" style="padding:6px 10px;font-weight:700">🔥 이번 주 추천 TOP 20 — 최근 7일 글 중 추천이 많은 순</span>';
+      const el = this.$('postList'); el.classList.remove('hidden');
+      if (!list.length) { el.innerHTML = '<div class="empty">이번 주에 올라온 글이 아직 없어요.</div>'; return; }
+      el.innerHTML = list.map((p, i) => this.postCard(p, i + 1)).join(''); return;
+    }
+    if (!sortBar.querySelector('button')) sortBar.innerHTML = '<button data-s="hot">🔥 인기</button><button data-s="new">🕒 최신</button><button data-s="top">⬆ 추천</button>', sortBar.querySelectorAll('button').forEach(b => b.onclick = () => { this.sort = b.dataset.s; this.renderList(); });
+    sortBar.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.s === this.sort));
     list = [...list.filter(p => p.pinned).sort((a, b) => (b.pinnedAt || '') > (a.pinnedAt || '') ? 1 : -1), ...this.sorted(list.filter(p => !p.pinned))];
     const el = this.$('postList'); el.classList.remove('hidden');
     if (!list.length) { el.innerHTML = `<div class="empty">글이 없어요. 첫 글을 올려 보세요.</div>`; return; }
-    el.innerHTML = list.map(p => {
-      const ci = this.cinfo(p.community), n = this.comments(p.id).length;
-      return `<article class="r-post ${p.pinned ? 'pinned' : ''}" onclick="Community.show('${p.id}')">
+    el.innerHTML = list.map(p => this.postCard(p)).join('');
+  },
+  postCard(p, rank) {
+    const ci = this.cinfo(p.community), n = this.comments(p.id).length;
+    return `<article class="r-post ${p.pinned ? 'pinned' : ''}" onclick="Community.show('${p.id}')">
+        ${rank ? `<div class="r-rank">${rank}</div>` : ''}
         ${this.voteBox(p.id, p.score)}
         <div class="r-body">
           <div class="r-meta">${p.pinned ? '<span class="tag dark">📌 공지</span>' : ''}<span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
@@ -155,7 +168,6 @@ const Community = {
           ${(p.images || []).length ? `<div class="photos">${p.images.map(src => `<img class="photo-thumb" src="${src}" alt="">`).join('')}</div>` : ''}
           <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>${p.author !== App.user() ? `<button onclick="event.stopPropagation();Auth.report('posts','${p.id}')">⚑ 신고</button>` : ''}</div>
         </div></article>`;
-    }).join('');
   },
   renderDetail() {
     const box = this.$('postDetail'), p = this.posts().find(x => x.id === this.open);

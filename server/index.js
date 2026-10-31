@@ -185,6 +185,7 @@ app.post('/api/reports', (req, res) => {
 });
 app.get('/api/reports', (req, res) => {
   if (!isAdmin(req)) return bad(res, 403, '운영자만 볼 수 있습니다.');
+  Object.values(db.reports).forEach(r => { if (r.status === 'open' && !db[r.targetType][r.targetId]) put('reports', r.id, { ...r, status: 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: 'system', action: '대상 글이 이미 삭제됨' }); });
   const list = Object.values(db.reports).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1).map(r => ({ ...r, exists: !!db[r.targetType][r.targetId] }));
   res.json(list);
 });
