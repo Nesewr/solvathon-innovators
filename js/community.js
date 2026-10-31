@@ -11,7 +11,7 @@ const Community = {
     this.$('rCommunitySelect').innerHTML = this.communities().map(c => `<option value="${c.id}">${c.icon} ${U.esc(c.name)}</option>`).join('');
     form.onsubmit = e => {
       e.preventDefault(); const f = new FormData(form);
-      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), score: 1 });
+      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), score: 1 });
       this.setVote(p.id, 1); form.reset(); form.classList.add('hidden'); App.toast('글을 올렸습니다.'); App.go('community', p.id);
     };
   },
@@ -54,7 +54,7 @@ const Community = {
   },
   comment(e, postId, parentId) {
     e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;
-    Store.push('comments', { id: U.uid(), postId, parentId: parentId || null, createdAt: new Date().toISOString(), author: App.user(), body, score: 0 });
+    Store.push('comments', { id: U.uid(), postId, parentId: parentId || null, createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(), body, score: 0 });
     this.replyTo = null; this.renderDetail();
   },
   reply(id) { this.replyTo = this.replyTo === id ? null : id; this.renderDetail(); },
@@ -101,7 +101,7 @@ const Community = {
       return `<article class="r-post" onclick="Community.show('${p.id}')">
         ${this.voteBox(p.id, p.score)}
         <div class="r-body">
-          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span><span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
           <h3 class="r-title">${U.esc(p.title)}</h3>
           <p class="r-preview">${U.esc(p.body).slice(0, 180)}${p.body.length > 180 ? '…' : ''}</p>
           <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button></div>
@@ -115,7 +115,7 @@ const Community = {
     const ci = this.cinfo(p.community), me = App.user(), all = this.comments(p.id);
     const tree = (parentId, depth) => all.filter(c => (c.parentId || null) === parentId).sort((a, b) => (b.score || 0) - (a.score || 0) || (a.createdAt < b.createdAt ? -1 : 1)).map(c => `
       <div class="r-comment" style="margin-left:${Math.min(depth, 6) * 22}px">
-        <div class="r-cmeta"><b>${U.esc(c.author)}</b><span>·</span><span>${U.fmtDate(c.createdAt)}</span></div>
+        <div class="r-cmeta"><b>${U.esc(c.author)}</b>${c.authorTag ? `<span class="tag green">${U.esc(c.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(c.createdAt)}</span></div>
         <div class="r-ctext ${c.deleted ? 'muted' : ''}">${U.md(c.body)}</div>
         <div class="r-cactions">${this.voteBox(c.id, c.score, true)}
           <button onclick="Community.reply('${c.id}')">↩ 답글</button>
@@ -128,7 +128,7 @@ const Community = {
       <article class="r-post detail">
         ${this.voteBox(p.id, p.score)}
         <div class="r-body">
-          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span><span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span>${p.authorTag ? `<span class="tag green">${U.esc(p.authorTag)}</span>` : ''}<span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
           <h2 class="r-title">${U.esc(p.title)}</h2>
           <div class="post-body">${U.md(p.body)}</div>
           <div class="r-actions"><span>💬 댓글 ${all.length}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>

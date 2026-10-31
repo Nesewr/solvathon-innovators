@@ -49,7 +49,7 @@ const Solver = {
       result = this.fallback(text, subject, tags, e);
     }
     note = {
-      id: U.uid(), createdAt: new Date().toISOString(), author: App.user(),
+      id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(),
       subject: result.subject || subject, tags: (tags.length ? tags : result.tags || []).slice(0, 6),
       question: text || result.question_text || '(사진 문제)', imageDataUrl: this.image,
       recognized: !text ? result.question_text : null,

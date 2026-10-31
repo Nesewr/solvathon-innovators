@@ -208,3 +208,17 @@ h2.r-title{font-size:22px}
 .r-replyform{margin:var(--s2) 0}
 .r-replyform textarea{width:100%}
 @media (max-width:960px){.reddit{grid-template-columns:1fr}.r-left{position:static}.r-left .r-nav{flex-direction:row;flex-wrap:wrap}.r-left .eyebrow{display:none}.r-navbtn{height:34px}.r-right{display:none}}
+
+/* 로그인 / 계정 */
+.auth-area{display:flex;align-items:center;gap:var(--s2)}
+.ghost.on-dark{color:var(--on-dark);border-color:var(--primary)}
+.who{display:flex;align-items:center;gap:6px;height:36px;padding:0 var(--s2) 0 4px;background:var(--elevated);border:1px solid var(--hairline-strong);border-radius:var(--r);color:var(--on-dark);font-weight:700;font-size:14px}
+.who img,.who .avatar{width:26px;height:26px;border-radius:50%;object-fit:cover}
+.who .avatar{display:inline-grid;place-items:center;background:var(--primary);color:var(--on-primary);font-size:13px}
+.who .tag{background:transparent;border:1px solid var(--primary);padding:0 6px;font-size:11px}
+.gbtn{min-height:44px;margin:var(--s4) 0}
+.or{display:flex;align-items:center;gap:var(--s3);margin:var(--s4) 0;color:var(--mute);font-size:13px}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--hairline)}
+label.check{flex-direction:row;align-items:center;gap:var(--s2);font-weight:400}
+label.check input{width:18px;height:18px;margin:0}
+@media (max-width:768px){.who .nick{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}

@@ -44,13 +44,15 @@ const App = {
   modules() { return [typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community]; },
   settings() { return Store.get('settings', { user: '김솔버', apiKey: '', model: 'gemini-2.5-flash', seeded: false }); },
   saveSettings(patch) { Store.set('settings', { ...this.settings(), ...patch }); },
-  user() { return this.settings().user; },
+  user() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? p.nickname : this.settings().user; },
+  userTag() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? Auth.roleLabel(p) : ''; },
 
   async init() {
     try { this.seed = await (await fetch('data/seed.json')).json(); } catch { this.seed = null; }
     if (!this.settings().seeded && this.seed) this.applySeed();
-    this.bindNav(); this.bindSettings(); this.renderUsers(); this.updateCounts();
-    document.addEventListener('store:change', () => { this.updateCounts(); this.renderUsers(); });
+    this.bindNav(); this.bindSettings(); this.updateCounts();
+    if (typeof Auth !== 'undefined') await Auth.init(); else this.renderUsers();
+    document.addEventListener('store:change', () => { this.updateCounts(); });
     window.addEventListener('hashchange', () => this.route());
     window.addEventListener('scroll', () => document.querySelector('.top').classList.toggle('scrolled', scrollY > 4));
     this.modules().forEach(m => m && m.init && m.init());
@@ -104,7 +106,7 @@ const App = {
   },
 
   renderUsers() {
-    const sel = document.getElementById('userSelect'); const users = (this.seed && this.seed.users) || ['김솔버', '이코딩'];
+    const sel = document.getElementById('userSelect'); if (!sel) return; const users = (this.seed && this.seed.users) || ['김솔버', '이코딩'];
     const cur = this.user();
     sel.innerHTML = users.map(u => `<option ${u === cur ? 'selected' : ''}>${U.esc(u)}</option>`).join('');
     sel.onchange = () => { this.saveSettings({ user: sel.value }); this.toast(`${sel.value} 계정으로 전환`); this.route(true); };
@@ -115,12 +117,17 @@ const App = {
   },
 
   bindSettings() {
-    const modal = document.getElementById('settings'), key = document.getElementById('apiKey'), model = document.getElementById('apiModel');
+    const modal = document.getElementById('settings'), key = document.getElementById('apiKey'), model = document.getElementById('apiModel'), gcid = document.getElementById('googleClientId');
     document.getElementById('settingsBtn').onclick = () => {
-      const s = this.settings(); key.value = s.apiKey || ''; model.value = s.model || 'gemini-2.5-flash'; modal.classList.remove('hidden');
+      const s = this.settings(); key.value = s.apiKey || ''; model.value = s.model || 'gemini-2.5-flash'; gcid.value = s.googleClientId || '';
+      const p = typeof Auth !== 'undefined' && Auth.current(); const acc = document.getElementById('settingsAccount');
+      acc.innerHTML = p && p.setupDone
+        ? `<div class="card soft" style="margin-bottom:16px"><div class="eyebrow">내 계정</div><b>${U.esc(p.nickname)}</b> <span class="tag green">${Auth.roleLabel(p)}</span><p class="small muted" style="margin:6px 0 10px">${U.esc(Auth.describe(p))}<br>${U.esc(p.email)}</p><div class="actions" style="margin:0"><button type="button" class="ghost small" onclick="document.getElementById('settings').classList.add('hidden');Auth.openSetup()">닉네임·과목 바꾸기</button><button type="button" class="ghost small danger" onclick="document.getElementById('settings').classList.add('hidden');Auth.logout()">로그아웃</button></div></div>`
+        : `<div class="card soft" style="margin-bottom:16px"><div class="eyebrow">내 계정</div><p class="small muted" style="margin:0 0 10px">로그인하지 않았습니다. 데모 계정으로 사용 중입니다.</p><button type="button" class="primary small" onclick="document.getElementById('settings').classList.add('hidden');Auth.openLogin()">학교 계정 로그인</button></div>`;
+      modal.classList.remove('hidden');
     };
     const close = () => {
-      this.saveSettings({ apiKey: key.value.trim(), model: model.value }); modal.classList.add('hidden');
+      this.saveSettings({ apiKey: key.value.trim(), model: model.value, googleClientId: gcid.value.trim() }); if (typeof Auth !== 'undefined') Auth.clientId = gcid.value.trim() || Auth.clientId; modal.classList.add('hidden');
       typeof Solver !== 'undefined' && Solver.renderKeyState();
     };
     document.getElementById('settingsClose').onclick = close;

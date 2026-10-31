@@ -19,7 +19,7 @@ const Lost = {
       e.preventDefault(); const f = new FormData(form);
       if (!f.get('x')) { App.toast('지도에서 물건이 있던 자리를 클릭해 핀을 찍어 주세요.', 'error'); this.$('lostPickMap').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       const item = Store.push('lost', {
-        id: U.uid(), createdAt: new Date().toISOString(), author: App.user(),
+        id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), authorTag: App.userTag(),
         item: f.get('item').trim(), kind: f.get('kind') === '주웠어요' ? 'found' : 'lost',
         floor: f.get('floor'), x: +f.get('x'), y: +f.get('y'), room: f.get('room') || null, place: f.get('place').trim(), date: f.get('date'),
         desc: f.get('desc').trim(), contact: f.get('contact'), status: 'finding'
@@ -55,7 +55,7 @@ const Lost = {
           <div class="title" ${l.status === 'found' ? 'style="text-decoration:line-through;color:var(--mute)"' : ''}>${U.esc(l.item)}</div>
           <div class="meta">
             ${l.x != null ? `<button class="link" onclick="Lost.locate('${l.id}')">📍 ${U.esc(l.floor)}${l.room ? ' · ' + U.esc(l.room) : ''}</button>` : ''}
-            ${l.place ? `<span>${U.esc(l.place)}</span>` : ''}<span>📅 ${U.esc(l.date)}</span><span>${U.esc(l.author)} · ${U.fmtDate(l.createdAt)}</span></div>
+            ${l.place ? `<span>${U.esc(l.place)}</span>` : ''}<span>📅 ${U.esc(l.date)}</span><span>${U.esc(l.author)}${l.authorTag ? ` <span class="tag green">${U.esc(l.authorTag)}</span>` : ''} · ${U.fmtDate(l.createdAt)}</span></div>
           ${l.desc ? `<p class="small" style="margin:6px 0 0">${U.esc(l.desc)}</p>` : ''}
           <p class="small muted" style="margin:4px 0 0">연락: ${U.esc(l.contact)}</p>
         </div>
