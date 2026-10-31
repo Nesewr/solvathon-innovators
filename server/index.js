@@ -133,6 +133,30 @@ app.delete('/api/c/:col/:id', (req, res) => {
 app.post('/api/admin/reset', (req, res) => { if (!ALLOW_RESET) return bad(res, 403, '초기화가 꺼져 있습니다.'); ['posts', 'comments', 'lost', 'notes', 'votes'].forEach(c => db[c] = {}); seed(); res.json({ ok: true }); });
 
 /* ---------- Gemini 프록시 ---------- */
+const G = 'https://generativelanguage.googleapis.com/v1beta';
+let modelCache = { names: null, at: 0, chosen: null };
+async function listModels() {
+  if (modelCache.names && Date.now() - modelCache.at < 6e5) return modelCache.names;
+  const r = await fetch(`${G}/models?pageSize=200`, { headers: { 'x-goog-api-key': GEMINI_KEY } });
+  if (!r.ok) throw new Error(`모델 목록 조회 실패 ${r.status}`);
+  const d = await r.json();
+  modelCache = { ...modelCache, names: (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace(/^models\//, '')), at: Date.now() };
+  return modelCache.names;
+}
+async function pickModel(exclude) {
+  const names = await listModels();
+  const prefs = [GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'];
+  for (const p of prefs) if (names.includes(p) && p !== exclude) return p;
+  const flash = names.filter(n => /flash/.test(n) && !/lite|8b|tts|image|audio|live|thinking|exp/.test(n) && n !== exclude).sort().reverse();
+  if (flash.length) return flash[0];
+  const any = names.filter(n => /^gemini/.test(n) && !/tts|image|audio|live|embedding/.test(n) && n !== exclude).sort().reverse();
+  return any[0] || null;
+}
+app.get('/api/ai/models', async (req, res) => {
+  if (!GEMINI_KEY) return bad(res, 503, '서버에 Gemini 키가 없습니다.');
+  try { const names = await listModels(); res.json({ configured: GEMINI_MODEL, chosen: modelCache.chosen, available: names }); }
+  catch (e) { bad(res, 502, e.message); }
+});
 app.post('/api/solve', async (req, res) => {
   if (needLogin(req, res)) return;
   if (!GEMINI_KEY) return bad(res, 503, '서버에 Gemini 키가 없습니다.');
@@ -144,15 +168,25 @@ app.post('/api/solve', async (req, res) => {
     '반드시 JSON만 출력: {"subject":"과목","question_text":"문제 원문","tags":["개념1","개념2"],"steps":["1단계","2단계"],"answer":"최종 답","concept":"핵심 개념 2~3문장","pitfall":"학생이 자주 하는 실수 1문장"}',
     text ? `\n문제:\n${text}` : '\n문제는 첨부한 사진에 있다.'].join('\n');
   const parts = [{ text: prompt }]; if (image) parts.push({ inline_data: { mime_type: 'image/jpeg', data: String(image).split(',')[1] || image } });
-  try {
+  const call = async model => {
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 50000);
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
-      method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
-      body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3 } })
-    }).finally(() => clearTimeout(t));
-    if (!r.ok) return bad(res, 502, `Gemini 오류 ${r.status}`);
+    try {
+      return await fetch(`${G}/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3 } })
+      });
+    } finally { clearTimeout(t); }
+  };
+  try {
+    let model = modelCache.chosen || GEMINI_MODEL, r = await call(model);
+    if (r.status === 404 || r.status === 400) {           // 모델 이름 문제 → 사용 가능한 모델로 재시도
+      const alt = await pickModel(model).catch(() => null);
+      if (alt && alt !== model) { model = alt; r = await call(model); }
+    }
+    if (!r.ok) { const body = await r.text().catch(() => ''); return bad(res, 502, `Gemini 오류 ${r.status} (${model}) ${body.slice(0, 200)}`); }
+    modelCache.chosen = model;
     const data = await r.json(); const raw = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
-    res.json(JSON.parse(raw.replace(/^```json|```$/g, '').trim()));
+    const out = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); out._model = model; res.json(out);
   } catch (e) { bad(res, 502, 'Gemini 호출 실패: ' + e.message); }
 });
 
