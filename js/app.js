@@ -44,8 +44,8 @@ const U = {
 
 const App = {
   seed: null,
-  tabs: ['solver', 'notes', 'lost', 'community'],
-  modules() { return [typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community]; },
+  tabs: ['home', 'solver', 'notes', 'lost', 'community'],
+  modules() { return [typeof Home !== 'undefined' && Home, typeof Solver !== 'undefined' && Solver, typeof Notes !== 'undefined' && Notes, typeof Lost !== 'undefined' && Lost, typeof Community !== 'undefined' && Community]; },
   settings() { return Store.get('settings', { user: '김솔버', apiKey: '', model: 'gemini-2.5-flash', seeded: false }); },
   saveSettings(patch) { Store.set('settings', { ...this.settings(), ...patch }); },
   user() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? p.nickname : this.settings().user; },
@@ -103,7 +103,7 @@ const App = {
     this.toast('데모 데이터를 초기화했습니다.');
     this.route(true);
   },
-  rerender() { const [name] = location.hash.slice(1).split('/'); const tab = this.tabs.includes(name) ? name : 'solver'; const mod = this.modules()[this.tabs.indexOf(tab)]; if (mod && mod.render) mod.render(false); },
+  rerender() { const [name] = location.hash.slice(1).split('/'); const tab = this.tabs.includes(name) ? name : 'home'; const mod = this.modules()[this.tabs.indexOf(tab)]; if (mod && mod.render) mod.render(false); },
   renderServerState() {
     const el = document.getElementById('srvState'); if (!el || typeof API === 'undefined') return;
     const st = API.status(); el.className = 'srv ' + st;
@@ -117,7 +117,7 @@ const App = {
   go(tab, sub) { const h = '#' + tab + (sub ? '/' + sub : ''); if (location.hash !== h) location.hash = h; else this.route(); },
   route(force) {
     const [name, ...rest] = location.hash.slice(1).split('/');
-    const tab = this.tabs.includes(name) ? name : 'solver'; this.sub = rest.join('/') || null;
+    const tab = this.tabs.includes(name) ? name : 'home'; this.sub = rest.join('/') || null;
     this.tabs.forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     const mod = this.modules()[this.tabs.indexOf(tab)];

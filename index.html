@@ -4,14 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>중산 올인원</title>
-<link rel="stylesheet" href="css/style.css?v=10311209">
+<link rel="stylesheet" href="css/style.css?v=10311222">
 </head>
 <body>
 <header class="top">
-  <div class="brand" onclick="App.go('solver')">
+  <div class="brand" onclick="App.go('home')">
     <span class="logo">J</span><span>중산 올인원</span>
   </div>
   <nav class="tabs" id="tabs">
+    <button data-tab="home">홈</button>
     <button data-tab="solver">AI 문제풀이</button>
     <button data-tab="notes">오답노트 <span class="badge" id="notesCount">0</span></button>
     <button data-tab="lost">분실물 센터 <span class="badge" id="lostCount">0</span></button>
@@ -25,6 +26,60 @@
 </header>
 
 <main id="main">
+  <!-- 홈 -->
+  <section id="tab-home" class="tab hidden home">
+    <div class="hero">
+      <div class="hero-in">
+        <div class="eyebrow on-dark">JUNGSAN ALL-IN-ONE</div>
+        <h1>중산고 학생의 하루를<br>한 곳에서.</h1>
+        <p>모르는 문제는 AI가 단계별로 풀어 오답노트에 쌓아 주고, 잃어버린 물건은 학교 지도에 핀으로 찾고, 선배·친구와 공부 이야기를 나눕니다.</p>
+        <div class="actions">
+          <button class="primary lg" onclick="App.go('solver')">AI 문제 풀어보기</button>
+          <button class="outline-dark lg" id="heroLogin" onclick="Auth.openLogin()">학교 계정 로그인</button>
+        </div>
+        <div class="hero-stats" id="homeStats"></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-grid"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="eyebrow">무엇을 할 수 있나요</div>
+    <div class="features">
+      <div class="card feature" onclick="App.go('solver')">
+        <div class="f-icon">∑</div><h3>AI 문제풀이</h3>
+        <p>문제를 적거나 사진을 올리면 단계별 풀이, 최종 답, 핵심 개념, 자주 하는 실수까지 알려줍니다.</p><span class="link">바로가기 →</span>
+      </div>
+      <div class="card feature" onclick="App.go('notes')">
+        <div class="f-icon">✎</div><h3>오답노트</h3>
+        <p>푼 문제가 자동으로 쌓입니다. 풀이를 가리고 다시 풀면서 복습 횟수를 기록합니다.</p><span class="link">바로가기 →</span>
+      </div>
+      <div class="card feature" onclick="App.go('lost')">
+        <div class="f-icon">📍</div><h3>분실물 센터</h3>
+        <p>층별 학교 지도에 핀을 찍어 잃어버린 물건과 주운 물건을 올리고, 찾으면 표시합니다.</p><span class="link">바로가기 →</span>
+      </div>
+      <div class="card feature" onclick="App.go('community')">
+        <div class="f-icon">💬</div><h3>커뮤니티</h3>
+        <p>공부·입시, 질문, 학교생활, 자유 게시판. 추천과 대댓글로 이야기가 이어집니다.</p><span class="link">바로가기 →</span>
+      </div>
+    </div>
+
+    <div class="home-cols">
+      <div class="card"><div class="row between"><div class="eyebrow" style="margin:0">최근 커뮤니티 글</div><button class="link" onclick="App.go('community')">더 보기 →</button></div><div id="homePosts" class="home-list"></div></div>
+      <div class="card"><div class="row between"><div class="eyebrow" style="margin:0">찾는 중인 분실물</div><button class="link" onclick="App.go('lost')">더 보기 →</button></div><div id="homeLost" class="home-list"></div></div>
+    </div>
+
+    <div class="card dark cta-strip">
+      <div><h3>처음 오셨나요?</h3><p class="muted">학교 구글 계정으로 로그인하면 학년·반이 자동으로 설정되고, 닉네임만 화면에 보입니다.</p></div>
+      <button class="primary" onclick="Auth.openLogin()">학교 계정 로그인</button>
+    </div>
+
+    <footer class="foot">
+      <div><b>중산 올인원</b> · 중산고등학교 솔버톤 2026 출품작</div>
+      <div class="muted small">실명·학번·전화번호는 저장소와 화면에 표시되지 않습니다. 문의는 커뮤니티 "질문" 게시판으로.</div>
+    </footer>
+  </section>
+
   <!-- AI 문제풀이 -->
   <section id="tab-solver" class="tab">
     <div class="card">
@@ -242,15 +297,16 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311209"></script>
-<script src="js/api.js?v=10311209"></script>
-<script src="js/auth.js?v=10311209"></script>
-<script src="js/solver.js?v=10311209"></script>
-<script src="js/notes.js?v=10311209"></script>
-<script src="js/floors.js?v=10311209"></script>
-<script src="js/map.js?v=10311209"></script>
-<script src="js/lost.js?v=10311209"></script>
-<script src="js/community.js?v=10311209"></script>
+<script src="js/app.js?v=10311222"></script>
+<script src="js/api.js?v=10311222"></script>
+<script src="js/auth.js?v=10311222"></script>
+<script src="js/solver.js?v=10311222"></script>
+<script src="js/notes.js?v=10311222"></script>
+<script src="js/floors.js?v=10311222"></script>
+<script src="js/map.js?v=10311222"></script>
+<script src="js/lost.js?v=10311222"></script>
+<script src="js/home.js?v=10311222"></script>
+<script src="js/community.js?v=10311222"></script>
 <script>App.init();</script>
 </body>
 </html>
