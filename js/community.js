@@ -1,47 +1,144 @@
-/* 커뮤니티(선택): 글 목록 / 작성 / 상세 + 댓글 */
+/* 커뮤니티 (Reddit 구조): 게시판 / 정렬 / 투표 / 글 상세 / 대댓글 / 공유 */
 const Community = {
-  open: null,
+  open: null, community: '', sort: 'hot', replyTo: null,
   init() {
     this.$ = id => document.getElementById(id);
     const form = this.$('postForm');
-    this.$('postNewBtn').onclick = () => { form.classList.toggle('hidden'); form.title.focus(); };
+    this.$('postNewBtn').onclick = () => { form.classList.toggle('hidden'); if (this.community && !this.community.startsWith('__')) this.$('rCommunitySelect').value = this.community; form.title.focus(); };
     this.$('postCancel').onclick = () => { form.reset(); form.classList.add('hidden'); };
+    this.$('rSearch').oninput = () => this.renderList();
+    this.$('rSort').querySelectorAll('button').forEach(b => b.onclick = () => { this.sort = b.dataset.s; this.renderList(); });
+    this.$('rCommunitySelect').innerHTML = this.communities().map(c => `<option value="${c.id}">${c.icon} ${U.esc(c.name)}</option>`).join('');
     form.onsubmit = e => {
       e.preventDefault(); const f = new FormData(form);
-      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), title: f.get('title').trim(), body: f.get('body').trim() });
-      form.reset(); form.classList.add('hidden'); this.open = p.id; App.toast('글을 올렸습니다.'); this.render();
+      const p = Store.push('posts', { id: U.uid(), createdAt: new Date().toISOString(), author: App.user(), community: f.get('community'), title: f.get('title').trim(), body: f.get('body').trim(), score: 1 });
+      this.setVote(p.id, 1); form.reset(); form.classList.add('hidden'); App.toast('글을 올렸습니다.'); App.go('community', p.id);
     };
   },
-  render(force) { if (force) this.open = null; this.renderList(); this.renderDetail(); },
-  posts() { return Store.get('posts', []); },
-  comments(postId) { return Store.get('comments', []).filter(c => c.postId === postId).sort((a, b) => a.createdAt < b.createdAt ? -1 : 1); },
-  renderList() {
-    const el = this.$('postList'), list = this.posts();
-    if (!list.length) { el.innerHTML = `<div class="empty">첫 글을 올려 보세요.</div>`; return; }
-    el.innerHTML = list.map(p => `
-      <div class="item" onclick="Community.show('${p.id}')">
-        <div class="body"><div class="title">${U.esc(p.title)}</div>
-          <div class="meta"><span>${U.esc(p.author)}</span><span>${U.fmtDate(p.createdAt)}</span><span>💬 ${this.comments(p.id).length}</span></div></div></div>`).join('');
+  render(force) {
+    if (force) { this.open = null; }
+    this.open = App.sub || null;
+    this.renderSidebar(); this.renderAbout();
+    if (this.open) { this.renderDetail(); } else { this.$('postDetail').classList.add('hidden'); this.renderList(); }
   },
-  show(id) { this.open = id; this.renderDetail(); this.$('postDetail').scrollIntoView({ behavior: 'smooth' }); },
-  close() { this.open = null; this.renderDetail(); },
+
+  // ----- 데이터 -----
+  communities() { return (App.seed && App.seed.communities) || [{ id: 'free', name: '자유', desc: '', icon: '💬' }]; },
+  cinfo(id) { return this.communities().find(c => c.id === id) || { id, name: id, icon: '💬', desc: '' }; },
+  posts() { return Store.get('posts', []); },
+  comments(postId) { return Store.get('comments', []).filter(c => c.postId === postId); },
+  myVotes() { const v = Store.get('votes', {}); return v[App.user()] || {}; },
+  setVote(id, dir) {
+    const all = Store.get('votes', {}), me = App.user(); all[me] = all[me] || {};
+    const prev = all[me][id] || 0, next = prev === dir ? 0 : dir; all[me][id] = next;
+    const delta = next - prev;
+    const post = this.posts().find(p => p.id === id);
+    if (post) Store.update('posts', id, { score: (post.score || 0) + delta });
+    else { const c = Store.get('comments', []).find(c => c.id === id); if (c) Store.update('comments', id, { score: (c.score || 0) + delta }); }
+    Store.set('votes', all);
+  },
+  hot(p) { const hours = (Date.now() - new Date(p.createdAt)) / 36e5; return (p.score || 0) / Math.pow(hours + 2, 1.3); },
+  sorted(list) {
+    const s = this.sort;
+    return [...list].sort((a, b) => s === 'new' ? (a.createdAt < b.createdAt ? 1 : -1) : s === 'top' ? (b.score || 0) - (a.score || 0) : this.hot(b) - this.hot(a));
+  },
+
+  // ----- 동작 -----
+  pickCommunity(id) { this.community = id; App.go('community'); this.render(); },
+  vote(e, id, dir) { e.stopPropagation(); this.setVote(id, dir); this.open ? this.renderDetail() : this.renderList(); },
+  show(id) { App.go('community', id); },
+  back() { App.go('community'); },
+  share(e, id) {
+    e.stopPropagation(); const url = location.origin + location.pathname + '#community/' + id;
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => App.toast('링크를 복사했습니다.')).catch(() => prompt('링크', url));
+  },
+  comment(e, postId, parentId) {
+    e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;
+    Store.push('comments', { id: U.uid(), postId, parentId: parentId || null, createdAt: new Date().toISOString(), author: App.user(), body, score: 0 });
+    this.replyTo = null; this.renderDetail();
+  },
+  reply(id) { this.replyTo = this.replyTo === id ? null : id; this.renderDetail(); },
+  del(id) {
+    if (!confirm('글을 삭제할까요?')) return;
+    Store.remove('posts', id); Store.set('comments', Store.get('comments', []).filter(c => c.postId !== id)); App.go('community');
+  },
+  delComment(id) { if (confirm('댓글을 삭제할까요?')) { Store.update('comments', id, { body: '[삭제된 댓글]', deleted: true }); this.renderDetail(); } },
+
+  // ----- 렌더 -----
+  voteBox(id, score, horizontal) {
+    const v = this.myVotes()[id] || 0;
+    return `<div class="r-vote ${horizontal ? 'h' : ''}">
+      <button class="${v === 1 ? 'up' : ''}" onclick="Community.vote(event,'${id}',1)" title="추천">▲</button>
+      <b>${score || 0}</b>
+      <button class="${v === -1 ? 'down' : ''}" onclick="Community.vote(event,'${id}',-1)" title="비추천">▼</button></div>`;
+  },
+  renderSidebar() {
+    const counts = {}; this.posts().forEach(p => counts[p.community] = (counts[p.community] || 0) + 1);
+    this.$('rCommunities').innerHTML = this.communities().map(c => `<button class="r-navbtn ${this.community === c.id ? 'active' : ''}" onclick="Community.pickCommunity('${c.id}')">${c.icon} ${U.esc(c.name)}<span class="muted small">${counts[c.id] || 0}</span></button>`).join('');
+    document.querySelectorAll('.r-left .r-nav:first-child .r-navbtn').forEach(b => b.classList.toggle('active', b.dataset.c === this.community));
+  },
+  renderAbout() {
+    const c = this.community && !this.community.startsWith('__') ? this.cinfo(this.community) : null;
+    const total = this.posts().length, members = new Set(this.posts().map(p => p.author)).size;
+    this.$('rAbout').innerHTML = c
+      ? `<div class="eyebrow">게시판 소개</div><h3>${c.icon} ${U.esc(c.name)}</h3><p class="small muted" style="margin:8px 0">${U.esc(c.desc)}</p>
+         <div class="r-stats"><div><b>${this.posts().filter(p => p.community === c.id).length}</b><span>글</span></div><div><b>${members}</b><span>참여자</span></div></div>
+         <button class="primary" style="width:100%" onclick="document.getElementById('postNewBtn').click()">이 게시판에 글쓰기</button>`
+      : `<div class="eyebrow">중산 커뮤니티</div><h3>🏠 홈</h3><p class="small muted" style="margin:8px 0">중산고 학생들이 공부·학교생활 이야기를 나누는 곳. 닉네임으로만 활동합니다.</p>
+         <div class="r-stats"><div><b>${total}</b><span>글</span></div><div><b>${members}</b><span>참여자</span></div></div>
+         <button class="primary" style="width:100%" onclick="document.getElementById('postNewBtn').click()">글쓰기</button>`;
+  },
+  renderList() {
+    const q = this.$('rSearch').value.trim().toLowerCase(), c = this.community;
+    let list = this.posts().filter(p => (!c || c.startsWith('__') || p.community === c) && (!q || (p.title + ' ' + p.body).toLowerCase().includes(q)));
+    if (c === '__hot') { this.sort = 'hot'; }
+    this.$('rSort').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.s === this.sort));
+    list = this.sorted(list);
+    const el = this.$('postList'); el.classList.remove('hidden');
+    if (!list.length) { el.innerHTML = `<div class="empty">글이 없어요. 첫 글을 올려 보세요.</div>`; return; }
+    el.innerHTML = list.map(p => {
+      const ci = this.cinfo(p.community), n = this.comments(p.id).length;
+      return `<article class="r-post" onclick="Community.show('${p.id}')">
+        ${this.voteBox(p.id, p.score)}
+        <div class="r-body">
+          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span><span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <h3 class="r-title">${U.esc(p.title)}</h3>
+          <p class="r-preview">${U.esc(p.body).slice(0, 180)}${p.body.length > 180 ? '…' : ''}</p>
+          <div class="r-actions"><span>💬 댓글 ${n}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button></div>
+        </div></article>`;
+    }).join('');
+  },
   renderDetail() {
     const box = this.$('postDetail'), p = this.posts().find(x => x.id === this.open);
-    if (!p) { box.classList.add('hidden'); box.innerHTML = ''; return; }
-    box.classList.remove('hidden'); const me = App.user();
+    if (!p) { box.classList.add('hidden'); this.open = null; this.renderList(); return; }
+    this.$('postList').classList.add('hidden'); box.classList.remove('hidden');
+    const ci = this.cinfo(p.community), me = App.user(), all = this.comments(p.id);
+    const tree = (parentId, depth) => all.filter(c => (c.parentId || null) === parentId).sort((a, b) => (b.score || 0) - (a.score || 0) || (a.createdAt < b.createdAt ? -1 : 1)).map(c => `
+      <div class="r-comment" style="margin-left:${Math.min(depth, 6) * 22}px">
+        <div class="r-cmeta"><b>${U.esc(c.author)}</b><span>·</span><span>${U.fmtDate(c.createdAt)}</span></div>
+        <div class="r-ctext ${c.deleted ? 'muted' : ''}">${U.md(c.body)}</div>
+        <div class="r-cactions">${this.voteBox(c.id, c.score, true)}
+          <button onclick="Community.reply('${c.id}')">↩ 답글</button>
+          ${c.author === me && !c.deleted ? `<button onclick="Community.delComment('${c.id}')">삭제</button>` : ''}</div>
+        ${this.replyTo === c.id ? `<form class="r-replyform" onsubmit="Community.comment(event,'${p.id}','${c.id}')"><textarea name="body" rows="2" required placeholder="${U.esc(c.author)}님에게 답글"></textarea><div class="actions" style="margin-top:6px"><button class="primary small">답글 달기</button><button type="button" class="ghost small" onclick="Community.reply(null)">취소</button></div></form>` : ''}
+        ${tree(c.id, depth + 1)}
+      </div>`).join('');
     box.innerHTML = `
-      <div class="result-head"><h3>${U.esc(p.title)}</h3><button class="link" style="color:var(--on-dark)" onclick="Community.close()">✕ 닫기</button></div>
-      <div class="meta muted small">${U.esc(p.author)} · ${U.fmtDate(p.createdAt)}</div>
-      <div class="post-body">${U.md(p.body)}</div>
-      ${p.author === me ? `<button class="ghost danger small" onclick="Community.del('${p.id}')">글 삭제</button>` : ''}
-      <hr><div class="eyebrow">댓글 ${this.comments(p.id).length}</div>
-      ${this.comments(p.id).map(c => `<div class="comment"><div class="meta">${U.esc(c.author)} · ${U.fmtDate(c.createdAt)}</div>${U.md(c.body)}</div>`).join('')}
-      <form onsubmit="Community.comment(event,'${p.id}')" class="row" style="margin-top:12px">
-        <input name="body" class="grow" required placeholder="${U.esc(me)}으로 댓글 쓰기"><button class="primary">댓글</button></form>`;
-  },
-  comment(e, postId) {
-    e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;
-    Store.push('comments', { id: U.uid(), postId, createdAt: new Date().toISOString(), author: App.user(), body }); this.render();
-  },
-  del(id) { if (confirm('글을 삭제할까요?')) { Store.remove('posts', id); Store.set('comments', Store.get('comments', []).filter(c => c.postId !== id)); this.open = null; this.render(); } }
+      <button class="link" onclick="Community.back()" style="margin-bottom:8px">← ${ci.icon} ${U.esc(ci.name)} 목록으로</button>
+      <article class="r-post detail">
+        ${this.voteBox(p.id, p.score)}
+        <div class="r-body">
+          <div class="r-meta"><span class="r-flair">${ci.icon} ${U.esc(ci.name)}</span><span>${U.esc(p.author)}</span><span>·</span><span>${U.fmtDate(p.createdAt)}</span></div>
+          <h2 class="r-title">${U.esc(p.title)}</h2>
+          <div class="post-body">${U.md(p.body)}</div>
+          <div class="r-actions"><span>💬 댓글 ${all.length}</span><button onclick="Community.share(event,'${p.id}')">↗ 공유</button>
+            ${p.author === me ? `<button onclick="Community.del('${p.id}')">🗑 삭제</button>` : ''}</div>
+        </div></article>
+      <form class="card" style="margin-top:12px" onsubmit="Community.comment(event,'${p.id}',null)">
+        <div class="eyebrow">${U.esc(me)}(으)로 댓글 쓰기</div>
+        <textarea name="body" rows="3" required placeholder="생각을 나눠 주세요"></textarea>
+        <div class="actions"><button class="primary">댓글 달기</button></div></form>
+      <div class="r-comments">${all.length ? tree(null, 0) : '<div class="empty">첫 댓글을 남겨 보세요.</div>'}</div>`;
+    window.scrollTo(0, 0);
+  }
 };

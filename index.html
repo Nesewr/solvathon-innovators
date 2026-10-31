@@ -124,24 +124,50 @@
     </div>
   </section>
 
-  <!-- 커뮤니티 -->
+  <!-- 커뮤니티 (Reddit 구조) -->
   <section id="tab-community" class="tab hidden">
-    <div class="card">
-      <div class="row between">
-        <h2>커뮤니티</h2>
-        <button class="primary" id="postNewBtn">+ 글쓰기</button>
-      </div>
-      <form id="postForm" class="form hidden">
-        <label>제목 <input name="title" required></label>
-        <label>내용 <textarea name="body" rows="4" required></textarea></label>
-        <div class="actions">
-          <button class="primary" type="submit">올리기</button>
-          <button class="ghost" type="button" id="postCancel">취소</button>
+    <div class="reddit">
+      <aside class="r-left">
+        <div class="r-nav">
+          <button class="r-navbtn" data-c="" onclick="Community.pickCommunity('')">🏠 홈</button>
+          <button class="r-navbtn" data-c="__hot" onclick="Community.pickCommunity('__hot')">🔥 인기</button>
         </div>
-      </form>
-      <div id="postList" class="list"></div>
+        <div class="eyebrow" style="margin-top:16px">게시판</div>
+        <div class="r-nav" id="rCommunities"></div>
+      </aside>
+      <div class="r-main">
+        <div class="r-bar">
+          <input id="rSearch" placeholder="🔍 글 검색">
+          <button class="primary small" id="postNewBtn">+ 글쓰기</button>
+        </div>
+        <form id="postForm" class="card hidden" style="margin-bottom:12px">
+          <h3 style="margin-bottom:12px">글쓰기</h3>
+          <div class="row">
+            <label>게시판 <select name="community" id="rCommunitySelect"></select></label>
+            <label class="grow">제목 <input name="title" required maxlength="120" placeholder="제목"></label>
+          </div>
+          <label>내용 <textarea name="body" rows="5" required placeholder="내용을 적어 주세요. 실명·학번·전화번호는 쓰지 않습니다."></textarea></label>
+          <div class="actions"><button class="primary" type="submit">올리기</button><button class="ghost" type="button" id="postCancel">취소</button></div>
+        </form>
+        <div class="r-sort" id="rSort">
+          <button data-s="hot" class="active">🔥 인기</button><button data-s="new">🕒 최신</button><button data-s="top">⬆ 추천</button>
+        </div>
+        <div id="postList" class="r-feed"></div>
+        <div id="postDetail" class="hidden"></div>
+      </div>
+      <aside class="r-right">
+        <div class="card r-about" id="rAbout"></div>
+        <div class="card" style="margin-top:12px">
+          <div class="eyebrow">커뮤니티 규칙</div>
+          <ol class="r-rules">
+            <li>실명·학번·전화번호를 쓰지 않습니다.</li>
+            <li>서로 존중합니다. 비방·조롱 금지.</li>
+            <li>답을 베끼지 말고 풀이 과정을 나눕니다.</li>
+            <li>분실물은 분실물 센터에 올립니다.</li>
+          </ol>
+        </div>
+      </aside>
     </div>
-    <div class="card hidden" id="postDetail"></div>
   </section>
 </main>
 

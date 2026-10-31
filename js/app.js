@@ -66,11 +66,17 @@ const App = {
     })));
     Store.set('lost', s.lost.map(l => ({ id: U.uid(), createdAt: U.daysAgoISO(l.daysAgo), ...l })));
     const posts = [], comments = [];
-    s.posts.forEach(p => {
-      const id = U.uid(); posts.push({ id, createdAt: U.daysAgoISO(p.daysAgo), author: p.author, title: p.title, body: p.body });
-      (p.comments || []).forEach(c => comments.push({ id: U.uid(), postId: id, createdAt: U.daysAgoISO(p.daysAgo - 0.5), author: c.author, body: c.body }));
+    const addComments = (postId, list, parentId, depthDays) => (list || []).forEach(c => {
+      const id = U.uid();
+      comments.push({ id, postId, parentId: parentId || null, createdAt: U.daysAgoISO(depthDays), author: c.author, body: c.body, score: c.score || 0 });
+      addComments(postId, c.replies, id, Math.max(0, depthDays - 0.2));
     });
-    Store.set('posts', posts); Store.set('comments', comments);
+    s.posts.forEach(p => {
+      const id = U.uid();
+      posts.push({ id, createdAt: U.daysAgoISO(p.daysAgo), author: p.author, community: p.community || 'free', title: p.title, body: p.body, score: p.score || 0 });
+      addComments(id, p.comments, null, Math.max(0, p.daysAgo - 0.3));
+    });
+    Store.set('posts', posts); Store.set('comments', comments); Store.set('votes', {});
     this.saveSettings({ seeded: true });
   },
 
@@ -86,9 +92,10 @@ const App = {
   bindNav() {
     document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => this.go(b.dataset.tab)));
   },
-  go(tab) { if (location.hash !== '#' + tab) location.hash = tab; else this.route(); },
+  go(tab, sub) { const h = '#' + tab + (sub ? '/' + sub : ''); if (location.hash !== h) location.hash = h; else this.route(); },
   route(force) {
-    const tab = this.tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'solver';
+    const [name, ...rest] = location.hash.slice(1).split('/');
+    const tab = this.tabs.includes(name) ? name : 'solver'; this.sub = rest.join('/') || null;
     this.tabs.forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     const mod = this.modules()[this.tabs.indexOf(tab)];

@@ -160,3 +160,51 @@ hr{border:0;border-top:1px solid var(--hairline);margin:var(--s4) 0}
 @keyframes drop{from{transform:translateY(-12px);opacity:0}to{transform:none;opacity:1}}
 .map-small svg{max-height:260px;min-width:420px}
 .pick-pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 var(--s3);background:var(--ink);color:var(--on-dark);border-radius:var(--r);font-weight:700;font-size:14px}
+
+/* 커뮤니티 — Reddit 3단 레이아웃 */
+.reddit{display:grid;grid-template-columns:200px minmax(0,1fr) 280px;gap:var(--s5);align-items:start}
+.r-left,.r-right{position:sticky;top:80px}
+.r-nav{display:flex;flex-direction:column;gap:2px}
+.r-navbtn{display:flex;justify-content:space-between;align-items:center;height:38px;padding:0 var(--s3);background:transparent;border:0;border-left:3px solid transparent;border-radius:var(--r);text-align:left;font-weight:700;color:var(--body)}
+.r-navbtn:hover{background:var(--soft)}
+.r-navbtn.active{background:var(--soft);border-left-color:var(--primary);color:var(--ink)}
+.r-bar{display:flex;gap:var(--s3);align-items:center;margin-bottom:var(--s3)}
+.r-bar input{flex:1;height:40px;background:var(--soft);border-color:var(--soft)}
+.r-sort{display:flex;gap:var(--s1);padding:var(--s2);border:1px solid var(--hairline);border-radius:var(--r);margin-bottom:var(--s3);background:var(--canvas)}
+.r-sort button{height:32px;padding:0 var(--s3);background:transparent;border:0;border-radius:var(--r);font-weight:700;color:var(--mute)}
+.r-sort button.active{background:var(--ink);color:var(--on-dark)}
+.r-feed{display:flex;flex-direction:column;gap:var(--s2)}
+.r-post{display:flex;background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--r);cursor:pointer}
+.r-post:hover{border-color:var(--ink)}
+.r-post.detail{cursor:default}
+.r-post.detail:hover{border-color:var(--hairline)}
+.r-vote{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--s3) var(--s2);background:var(--soft);min-width:44px;font-size:13px}
+.r-vote button{width:28px;height:28px;background:transparent;border:0;border-radius:var(--r);color:var(--stone);font-size:14px;line-height:1}
+.r-vote button:hover{background:#e6e6e6;color:var(--ink)}
+.r-vote button.up{color:var(--success)}
+.r-vote button.down{color:var(--error)}
+.r-vote.h{flex-direction:row;background:transparent;padding:0;min-width:0}
+.r-body{flex:1;min-width:0;padding:var(--s3) var(--s4)}
+.r-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:4px}
+.r-flair{padding:1px 8px;background:var(--ink);color:var(--on-dark);border-radius:var(--r);font-weight:700;font-size:12px}
+.r-title{font-size:18px;line-height:1.3;margin:2px 0 6px;word-break:break-word}
+h2.r-title{font-size:22px}
+.r-preview{color:var(--body);font-size:15px;margin:0 0 8px;white-space:pre-line;word-break:break-word}
+.r-actions{display:flex;gap:var(--s2);align-items:center;font-size:13px;font-weight:700;color:var(--mute)}
+.r-actions button{height:28px;padding:0 var(--s2);background:transparent;border:0;border-radius:var(--r);color:var(--mute);font-weight:700;font-size:13px}
+.r-actions button:hover,.r-cactions button:hover{background:var(--soft);color:var(--ink)}
+.r-stats{display:flex;gap:var(--s5);margin:var(--s3) 0 var(--s4)}
+.r-stats div{display:flex;flex-direction:column}
+.r-stats b{font-size:20px}
+.r-stats span{font-size:12px;color:var(--mute)}
+.r-rules{margin:0;padding-left:18px;font-size:14px;line-height:1.7}
+.r-comments{margin-top:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+.r-comment{padding:var(--s3) 0 0 var(--s3);border-left:2px solid var(--hairline)}
+.r-comment:hover{border-left-color:var(--primary)}
+.r-cmeta{display:flex;gap:6px;font-size:13px;color:var(--mute)}
+.r-ctext{margin:4px 0 6px;font-size:15px;word-break:break-word}
+.r-cactions{display:flex;gap:var(--s1);align-items:center;font-size:13px}
+.r-cactions button{height:26px;padding:0 var(--s2);background:transparent;border:0;border-radius:var(--r);color:var(--mute);font-weight:700;font-size:13px}
+.r-replyform{margin:var(--s2) 0}
+.r-replyform textarea{width:100%}
+@media (max-width:960px){.reddit{grid-template-columns:1fr}.r-left{position:static}.r-left .r-nav{flex-direction:row;flex-wrap:wrap}.r-left .eyebrow{display:none}.r-navbtn{height:34px}.r-right{display:none}}
