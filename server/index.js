@@ -181,8 +181,10 @@ app.post('/api/solve', async (req, res) => {
   };
   try {
     let model = modelCache.chosen || GEMINI_MODEL, r = await call(model), tried = [model], body = '';
-    for (let i = 0; i < 3 && (r.status === 404 || r.status === 400); i++) {   // 모델 이름/권한 문제 → 대체 모델로 재시도
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < 4 && (r.status === 404 || r.status === 400 || r.status === 503 || r.status === 429); i++) {
       body = await r.text().catch(() => '');
+      if ((r.status === 503 || r.status === 429) && i === 0) { await sleep(1500); r = await call(model); continue; }   // 일시 과부하 → 같은 모델 1회 재시도
       const hinted = (body.match(/use\s+models\/([\w.-]+)/i) || [])[1];     // 오류 메시지가 권하는 모델 우선
       const alt = (hinted && !tried.includes(hinted)) ? hinted : await pickModel(tried).catch(() => null);
       if (!alt) break;
