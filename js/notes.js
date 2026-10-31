@@ -30,7 +30,8 @@ const Notes = {
           <div class="meta"><span class="tag dark">${U.esc(n.subject)}</span>${n.tags.map(t => `<span class="tag">${U.esc(t)}</span>`).join('')}
             ${this.due(n) ? '<span class="tag red">복습할 때</span>' : ''}<span>복습 ${n.reviewCount}회</span><span>${U.fmtDate(n.createdAt)}</span><span>${U.esc(n.author)}</span>
             ${n.source === 'fallback' ? '<span class="tag red">예시 모드</span>' : ''}</div>
-        </div></div>`).join('');
+        </div>
+        <button class="ghost danger small" title="삭제" onclick="event.stopPropagation();Notes.del('${n.id}')">삭제</button></div>`).join('');
   },
   show(id) { this.open = id; this.hidden = true; this.renderDetail(); this.$('noteDetail').scrollIntoView({ behavior: 'smooth' }); },
   close() { this.open = null; this.renderDetail(); },
@@ -42,7 +43,12 @@ const Notes = {
   },
   del(id) {
     if (!confirm('이 노트를 삭제할까요?')) return;
-    Store.remove('notes', id); this.open = null; App.toast('노트를 삭제했습니다.'); this.renderFilters(); this.renderList(); this.renderDetail();
+    Store.remove('notes', id); if (this.open === id) this.open = null; App.toast('노트를 삭제했습니다.'); this.renderFilters(); this.renderList(); this.renderDetail();
+  },
+  delAll() {
+    const list = this.all(); if (!list.length) return;
+    if (!confirm(`오답노트 ${list.length}개를 모두 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    list.forEach(n => Store.remove('notes', n.id)); this.open = null; App.toast('오답노트를 모두 삭제했습니다.'); this.renderFilters(); this.renderList(); this.renderDetail();
   },
 
   renderDetail() {
@@ -51,7 +57,7 @@ const Notes = {
     box.classList.remove('hidden');
     const blur = this.hidden ? 'blur' : '';
     box.innerHTML = `
-      <div class="result-head"><h3>${U.esc(n.subject)} · ${U.fmtDate(n.createdAt)}</h3><button class="link" style="color:var(--on-dark)" onclick="Notes.close()">✕ 닫기</button></div>
+      <div class="result-head"><h3>${U.esc(n.subject)} · ${U.fmtDate(n.createdAt)}</h3><div class="row" style="gap:12px"><button class="link" style="color:#ff8a80" onclick="Notes.del('${n.id}')">🗑 삭제</button><button class="link" style="color:var(--on-dark)" onclick="Notes.close()">✕ 닫기</button></div></div>
       <div class="eyebrow">문제</div>
       ${n.imageDataUrl ? `<img class="q-img" src="${n.imageDataUrl}" alt="문제 사진">` : ''}
       <div class="q-text">${U.md(n.question)}</div>
