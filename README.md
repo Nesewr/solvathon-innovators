@@ -39,50 +39,54 @@
 
 | 구분 | 기능 |
 | --- | --- |
-| 필수 (15:30까지 반드시) | ① 문제 텍스트 입력 → AI 단계별 풀이 (API 키는 사용자가 설정 화면에 입력, 저장소에 없음) ② 풀이 결과를 오답노트에 자동 저장 + 과목/태그별 목록 ③ 오답노트 상세·"다시 풀기"(풀이 가리기)·삭제 ④ 분실물 신고센터: 등록 / 목록 / "찾았어요" 처리 |
-| 선택 (시간이 남으면) | 문제 사진 업로드 → 이미지 인식 후 풀이 · 커뮤니티 게시판(글/댓글, 닉네임) · 생기부 이득 활동 모아보기 탭(정적 JSON, 교사 실명 제거) |
-| 제외 (오늘 하지 않음) | 로그인·회원가입·실계정(데모 계정 전환으로 대체) · 리로스쿨 실시간 크롤링 서버(학교 확인 필요) · 서버·DB·푸시 알림 · 신고/차단 기능 |
+| 필수 (15:30까지 반드시) | ① 문제 텍스트 입력 → AI 단계별 풀이 (Gemini, 키는 서버 환경변수에만) ② 풀이 결과를 오답노트에 자동 저장 + 과목/태그별 목록 ③ 오답노트 상세·"다시 풀기"(풀이 가리기)·삭제 ④ 분실물 신고센터: 층별 지도에 핀 찍어 등록 / 층별 핀 지도 / "찾았어요" 처리 |
+| 선택 (시간이 남으면) | 문제 사진 업로드 → 이미지 인식 후 풀이 · 커뮤니티(Reddit 구조: 게시판·투표·대댓글·공유) · 학교 계정 로그인(이메일 규칙으로 학년·반 자동 인식, 첫 로그인 초기 설정) · 공유 서버(Express)로 글·분실물·오답노트 저장 · 생기부 이득 활동 모아보기 탭 |
+| 제외 (오늘 하지 않음) | 구글 워크스페이스 관리자 승인이 필요한 실제 구글 OAuth(버튼만 준비, 이메일 입력 로그인으로 대체) · 리로스쿨 실시간 크롤링 서버(학교 확인 필요) · 푸시 알림 · 신고/차단 기능 · 영구 DB(무료 서버의 파일 저장은 재배포 시 초기화) |
 
 **완성 여부 (15:30 기준)**
 - [ ] 필수 1: 텍스트 문제 → AI 풀이 결과 표시
 - [ ] 필수 2: 풀이 → 오답노트 자동 저장, 목록·필터 동작
 - [ ] 필수 3: 오답노트 상세 / 다시 풀기 / 삭제 동작
-- [ ] 필수 4: 분실물 등록 / 목록 / 찾았어요 동작
+- [ ] 필수 4: 분실물 지도 핀 등록 / 핀 지도 / 찾았어요 동작
 - [ ] GitHub Pages 배포 링크에서 위 4개 동작
-- [ ] 선택: 사진 문제 풀이 / 커뮤니티 / 생기부 활동 탭
+- [ ] 선택: 사진 문제 풀이 / 커뮤니티 / 로그인 / 공유 서버 / 생기부 활동 탭
 
 ## 3. 설계
 
-**화면 흐름:** 홈(탭) → AI 문제풀이(입력) → 풀이 결과 → 오답노트 목록 → 오답노트 상세(다시 풀기) / 분실물 목록 → 분실물 등록 → 찾았어요 / (우상단) 설정: 데모 계정 전환·API 키·데모 데이터 초기화
+**화면 흐름:** 홈(탭 4개) → AI 문제풀이(입력) → 풀이 결과 → 오답노트 목록 → 오답노트 상세(다시 풀기) / 분실물 지도+목록 → 등록(지도에 핀) → 찾았어요 / 커뮤니티 피드(게시판·정렬) → 글 상세(투표·대댓글) → 글쓰기 / (우상단) 로그인 → 초기 설정 → 설정(내 계정)
 
-**데이터 구조:** (브라우저 localStorage, 키별 JSON 배열)
+**데이터 구조:** (서버 `server/db.json` 컬렉션. 서버가 없으면 브라우저 localStorage에 같은 구조로 저장)
 
 ```
-notes(오답노트): id, createdAt, subject, tags[], question, imageDataUrl|null, solution, concept, reviewCount
-lost(분실물):    id, createdAt, item, place, date, desc, contact(교무실|담임|댓글), status(finding|found), author
-posts(게시글):   id, createdAt, author, title, body
-comments(댓글):  id, postId, createdAt, author, body
-settings:        user(김솔버|이코딩 데모 계정), apiKey, model
+profiles: email, role(student|teacher), entryYear, grade, klass, number, nickname, subject, setupDone
+sessions: token → email
+posts:    id, createdAt, author, authorTag, community(study|qna|school|free), title, body, score(서버가 투표 합으로 계산)
+comments: id, postId, parentId(대댓글), createdAt, author, body, score
+votes:    닉네임 → { 글/댓글 id: +1 | -1 }
+lost:     id, createdAt, author, item, kind(lost|found), floor, x, y(지도 SVG 좌표), room, place, date, desc, contact, status(finding|found)
+notes:    id, createdAt, author, subject, tags[], question, imageDataUrl, steps[], answer, concept, pitfall, reviewCount, lastReviewed, source(ai|fallback|seed)  ※ 본인만 조회
 ```
 
 **기술 선택:**
-- 선택: HTML + CSS + 바닐라 JS, localStorage + 데모 시드 데이터, Google Gemini API(gemini-2.5-flash)를 브라우저에서 직접 호출, GitHub Pages 배포.
-  이유: 빌드 없이 바로 배포되고 파일 단위로 역할을 나눌 수 있다. 서버·DB 없이 하루 안에 완성 가능하고 저장소에 키·개인정보가 들어가지 않는다. Gemini는 텍스트와 사진을 한 API로 처리하고 GitHub Pages 같은 외부 출처에서 브라우저 직접 호출(CORS)이 허용되는 것을 확인했다.
-- 고르지 않은 안과 이유: React 등 프레임워크(빌드·충돌 부담), Supabase/Firebase(공개 저장소에 키 노출), DeepSeek API(텍스트 전용이라 사진 문제 불가, 브라우저 직접 호출 미확인).
-- 막히면: AI 호출이 실패하면 미리 저장한 예시 풀이로 데모 진행. 사진 인식이 안 되면 텍스트 입력만 필수로 유지. Pages 배포가 막히면 `python3 -m http.server`로 로컬 시연. 시간이 남으면 DeepSeek를 텍스트 문제용 로컬 Python 프록시로 추가.
+- 선택: 프론트는 HTML + CSS + 바닐라 JS(빌드 없음, GitHub Pages). 서버는 Express 한 파일 + JSON 파일 저장(Render 무료). AI는 서버가 Gemini(gemini-2.5-flash)를 대신 호출. 로그인은 학교 이메일 규칙(입학년도-학번@jungsan.hs.kr → 학년·반·번호, 영문 포함 → 교사)으로 역할을 자동 인식하고 Google 토큰 검증은 서버에서. 지도는 팀이 오늘 그린 층별 안내도 SVG에서 벡터만 추출(80KB).
+  이유: 빌드·네이티브 모듈이 없어 설치와 배포가 실패할 여지가 적다. API 키는 서버 환경변수에만 있어 공개 저장소에 키가 들어가지 않는다. 서버가 죽어도 프론트가 localStorage로 자동 전환되어 발표가 멈추지 않는다.
+- 고르지 않은 안과 이유: React 등 프레임워크(빌드·충돌 부담), Firebase/Supabase(설정값이 저장소에 들어가 "키 금지" 규칙과 충돌), DeepSeek API(텍스트 전용이라 사진 문제 불가), SQLite(네이티브 빌드 실패 위험).
+- 막히면: AI 호출 실패 → 예시 풀이로 자동 대체. 서버 응답 없음 → 로컬 모드. 구글 로그인이 학교 워크스페이스에서 막히면 → 같은 규칙의 이메일 입력 로그인. Pages 반영 지연 → `python3 -m http.server`로 로컬 시연.
 
 **파일 구조 (역할 분담 단위):**
 
 ```
-index.html        전체 레이아웃·탭
-css/style.css
-js/app.js         탭 전환, 설정, 데모 데이터 시드/초기화, 공용 저장 함수
-js/solver.js      AI 호출, 풀이 화면, 오답노트 저장
-js/notes.js       오답노트 목록/상세/다시 풀기
-js/lost.js        분실물 센터
-js/community.js   (선택) 게시판
-js/activities.js  (선택) 생기부 활동 탭
-data/seed.json, data/activities.json
+index.html         레이아웃·탭·모달(설정/로그인/초기 설정)
+css/style.css      NVIDIA DESIGN.md 기반 토큰(검정 프레임·흰 캔버스·녹색 액센트·2px 모서리)
+js/app.js          Store(localStorage+서버 전달), 라우팅(#탭/하위), 설정, 시드
+js/api.js          서버 연동(헬스체크, 당겨오기 8초, 쓰기 전달, 로그인, AI 프록시)
+js/auth.js         이메일 규칙 파싱, Google 로그인, 초기 설정, 상단 계정 표시
+js/solver.js       AI 풀이 입력·사진 축소·결과 렌더·오답노트 저장
+js/notes.js        오답노트 목록/상세/다시 풀기
+js/floors.js       층별 지도 벡터 데이터   js/map.js  지도 컴포넌트(핀 찍기/표시)
+js/lost.js         분실물 센터            js/community.js  커뮤니티(Reddit 구조)
+server/index.js    Express API(컬렉션·로그인·투표 점수·Gemini 프록시)
+data/seed.json     데모 데이터   data/config.json  서버 주소·Client ID   docs/PLAN.md  개발 계획
 ```
 
 ## 4. 실행 링크·실행 방법
