@@ -272,3 +272,9 @@ label.check input{width:18px;height:18px;margin:0}
 .foot{display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;padding:var(--s5) 0 0;border-top:1px solid var(--hairline);color:var(--body);font-size:14px}
 @media (max-width:960px){.features{grid-template-columns:1fr 1fr}.home-cols{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-art{display:none}}
 @media (max-width:768px){.hero{margin:calc(-1*var(--s4)) calc(-1*var(--s4)) 0;padding:40px var(--s4) 32px}.hero h1{font-size:32px}.hero p{font-size:16px}.features{grid-template-columns:1fr}.cta-strip{flex-direction:column;align-items:flex-start}.hero-stats{gap:var(--s4)}.hero-stats b{font-size:24px}}
+
+.hero-links{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s3);margin:var(--s5) 0 var(--s4)}
+.hero-links button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:var(--s3) var(--s4);background:var(--elevated);color:var(--on-dark);border:1px solid var(--hairline-strong);border-radius:var(--r);font-weight:700;text-align:left}
+.hero-links button b{font-size:20px;color:var(--primary)}
+.hero-links button:hover{border-color:var(--primary)}
+@media (max-width:768px){.hero-links{grid-template-columns:1fr 1fr}}

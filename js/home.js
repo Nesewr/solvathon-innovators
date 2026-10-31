@@ -5,7 +5,7 @@ const Home = {
     const posts = Store.get('posts', []), lost = Store.get('lost', []), notes = Store.get('notes', []), comments = Store.get('comments', []);
     const finding = lost.filter(l => l.status === 'finding'), today = new Date().toDateString();
     const p = typeof Auth !== 'undefined' && Auth.current();
-    this.$('heroLogin').classList.toggle('hidden', !!(p && p.setupDone));
+    const hl = this.$('heroLogin'); if (p && p.setupDone) { hl.textContent = `${p.nickname}님, 오늘도 환영해요`; hl.onclick = () => App.go('community'); } else { hl.textContent = '학교 계정으로 시작하기'; hl.onclick = () => Auth.openLogin(); }
     this.$('homeStats').innerHTML = [
       [notes.length, p && p.setupDone ? '내 오답노트' : '오답노트'],
       [finding.length, '찾는 중인 분실물'],

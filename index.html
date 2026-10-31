@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>중산 올인원</title>
-<link rel="stylesheet" href="css/style.css?v=10311222">
+<link rel="stylesheet" href="css/style.css?v=10311223">
 </head>
 <body>
 <header class="top">
@@ -31,11 +31,16 @@
     <div class="hero">
       <div class="hero-in">
         <div class="eyebrow on-dark">JUNGSAN ALL-IN-ONE</div>
-        <h1>중산고 학생의 하루를<br>한 곳에서.</h1>
-        <p>모르는 문제는 AI가 단계별로 풀어 오답노트에 쌓아 주고, 잃어버린 물건은 학교 지도에 핀으로 찾고, 선배·친구와 공부 이야기를 나눕니다.</p>
+        <h1>공부도, 분실물도, 소통도.<br>중산고의 모든 것을 한 곳에서.</h1>
+        <p>AI 문제풀이 · 오답노트 · 분실물 센터 · 커뮤니티. 중산고 학생에게 필요한 네 가지를 학교 계정 하나로 씁니다.</p>
+        <div class="hero-links">
+          <button onclick="App.go('solver')"><b>∑</b>AI 문제풀이</button>
+          <button onclick="App.go('notes')"><b>✎</b>오답노트</button>
+          <button onclick="App.go('lost')"><b>📍</b>분실물 센터</button>
+          <button onclick="App.go('community')"><b>💬</b>커뮤니티</button>
+        </div>
         <div class="actions">
-          <button class="primary lg" onclick="App.go('solver')">AI 문제 풀어보기</button>
-          <button class="outline-dark lg" id="heroLogin" onclick="Auth.openLogin()">학교 계정 로그인</button>
+          <button class="primary lg" id="heroLogin" onclick="Auth.openLogin()">학교 계정으로 시작하기</button>
         </div>
         <div class="hero-stats" id="homeStats"></div>
       </div>
@@ -297,16 +302,16 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/app.js?v=10311222"></script>
-<script src="js/api.js?v=10311222"></script>
-<script src="js/auth.js?v=10311222"></script>
-<script src="js/solver.js?v=10311222"></script>
-<script src="js/notes.js?v=10311222"></script>
-<script src="js/floors.js?v=10311222"></script>
-<script src="js/map.js?v=10311222"></script>
-<script src="js/lost.js?v=10311222"></script>
-<script src="js/home.js?v=10311222"></script>
-<script src="js/community.js?v=10311222"></script>
+<script src="js/app.js?v=10311223"></script>
+<script src="js/api.js?v=10311223"></script>
+<script src="js/auth.js?v=10311223"></script>
+<script src="js/solver.js?v=10311223"></script>
+<script src="js/notes.js?v=10311223"></script>
+<script src="js/floors.js?v=10311223"></script>
+<script src="js/map.js?v=10311223"></script>
+<script src="js/lost.js?v=10311223"></script>
+<script src="js/home.js?v=10311223"></script>
+<script src="js/community.js?v=10311223"></script>
 <script>App.init();</script>
 </body>
 </html>
