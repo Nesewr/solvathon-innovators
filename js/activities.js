@@ -58,7 +58,7 @@ const Activities = {
       this.$('aCat').innerHTML = '<option value="">모든 분류</option>' + cats.map(c => `<option>${U.esc(c)}</option>`).join('');
       this.$('aRecord').innerHTML = '<option value="">모든 생기부 영역</option>' + recs.map(c => `<option>${U.esc(c)}</option>`).join('');
       const p = typeof Auth !== 'undefined' && Auth.current(); if (p && p.setupDone && p.grade) this.$('aGrade').value = String(p.grade);
-      this.$('aMeta').textContent = this.data.generated ? `수집 시각 ${this.data.generated.slice(0, 16).replace('T', ' ')} · ${this.data.count}건` : '';
+      if (this.data.generated) { const days = Math.floor((new Date() - new Date(this.data.generated.slice(0, 10))) / 864e5); this.$('aMeta').textContent = `마지막 수집 ${this.data.generated.slice(0, 10)} (${days === 0 ? '오늘' : days + '일 전'}) · ${this.data.count}건 · 3일 지나면 자동 갱신`; }
     }
     this.renderList();
   },
