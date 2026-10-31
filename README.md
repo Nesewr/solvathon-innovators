@@ -96,7 +96,7 @@ data/seed.json     데모 데이터   data/config.json  서버 주소·Client ID
 - 시연용 계정이나 테스트 데이터가 있으면 적습니다. (가짜 데이터만)
 -->
 
-- 실행 링크:
+- 실행 링크:https://nesewr.github.io/solvathon-innovators/#home
 - 실행 방법:
 
 ## 5. 실행 화면
@@ -127,7 +127,8 @@ data/seed.json     데모 데이터   data/config.json  서버 주소·Client ID
 | GitHub 아이디 | 맡은 일 | 주요 파일 |
 | --- | --- | --- |
 | Nesewr | | |
-
+| rlazmq | --- | --- |
+| jaehyun5471-del | --- | --- |
 ## 8. 한계와 다음 계획
 
 **한계:**
