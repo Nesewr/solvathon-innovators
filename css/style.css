@@ -297,3 +297,6 @@ label.check input{width:18px;height:18px;margin:0}
 
 .spinner.sm{width:11px;height:11px;border-width:2px;margin-right:5px}
 .srv.waking{color:var(--warning)}
+
+.ghost.on-dark-btn{color:var(--on-dark);border-color:var(--primary)}
+.ghost.on-dark-btn:hover{background:rgba(118,185,0,.15)}
