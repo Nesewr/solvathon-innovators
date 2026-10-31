@@ -8,6 +8,7 @@ const Notes = {
   },
   render(force) { if (force) this.open = null; this.renderFilters(); this.renderList(); this.renderDetail(); },
   all() { return Store.get('notes', []); },
+  due(n) { const last = n.lastReviewed || n.createdAt; return (Date.now() - new Date(last)) / 864e5 >= 3; },
 
   renderFilters() {
     const sel = this.$('nSubjectFilter'), cur = sel.value;
@@ -18,6 +19,8 @@ const Notes = {
     const sub = this.$('nSubjectFilter').value, q = this.$('nSearch').value.trim().toLowerCase();
     const list = this.all().filter(n => (!sub || n.subject === sub) && (!q || (n.question + ' ' + n.tags.join(' ') + ' ' + (n.concept || '')).toLowerCase().includes(q)));
     const el = this.$('notesList');
+    const due = this.all().filter(n => this.due(n)).length;
+    this.$('nDue').textContent = due ? `복습할 노트 ${due}개 (3일 이상 안 봄)` : '';
     if (!list.length) { el.innerHTML = `<div class="empty">아직 오답노트가 없어요. <b>AI 문제풀이</b>에서 문제를 풀면 자동으로 쌓입니다.</div>`; return; }
     el.innerHTML = list.map(n => `
       <div class="item" onclick="Notes.show('${n.id}')">
@@ -25,7 +28,7 @@ const Notes = {
         <div class="body">
           <div class="title">${U.esc(n.question).slice(0, 90)}${n.question.length > 90 ? '…' : ''}</div>
           <div class="meta"><span class="tag dark">${U.esc(n.subject)}</span>${n.tags.map(t => `<span class="tag">${U.esc(t)}</span>`).join('')}
-            <span>복습 ${n.reviewCount}회</span><span>${U.fmtDate(n.createdAt)}</span><span>${U.esc(n.author)}</span>
+            ${this.due(n) ? '<span class="tag red">복습할 때</span>' : ''}<span>복습 ${n.reviewCount}회</span><span>${U.fmtDate(n.createdAt)}</span><span>${U.esc(n.author)}</span>
             ${n.source === 'fallback' ? '<span class="tag red">예시 모드</span>' : ''}</div>
         </div></div>`).join('');
   },
@@ -56,7 +59,7 @@ const Notes = {
       <div class="actions">
         <button class="primary" onclick="Notes.review('${n.id}')">${this.hidden ? '다시 풀어봤어요 → 풀이 확인' : '복습 1회 추가'}</button>
         <button class="ghost" onclick="Notes.toggle()">${this.hidden ? '풀이 바로 보기' : '풀이 가리기'}</button>
-        <span class="muted small">복습 ${n.reviewCount}회${n.lastReviewed ? ` · 마지막 ${U.fmtDate(n.lastReviewed)}` : ''}</span>
+        <span class="muted small">복습 ${n.reviewCount}회${n.lastReviewed ? ` · 마지막 ${U.fmtDate(n.lastReviewed)}` : ''}${n.model ? ` · ${U.esc(n.model)}` : ''}</span>
       </div>
       <div class="solution ${blur}" style="margin-top:16px">
         <div class="block full"><h4>단계별 풀이</h4><ol class="steps">${(n.steps || []).map(s => `<li>${U.md(s)}</li>`).join('')}</ol></div>

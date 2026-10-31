@@ -3,26 +3,29 @@ const Auth = {
   DOMAIN: 'jungsan.hs.kr', clientId: '',
   async init() {
     this.$ = id => document.getElementById(id);
-    const h = (typeof API !== 'undefined' && API.health) || {};
-    this.clientId = h.googleClientId || (App.config || {}).googleClientId || '';
-    if (App.settings().googleClientId) this.clientId = App.settings().googleClientId;
-    this.demoLogin = h.demoLogin !== false; this.requireLogin = !!h.requireLogin;
-    this.renderHeader();
     this.$('loginClose').onclick = () => this.$('login').classList.add('hidden');
     this.$('login').addEventListener('click', e => { if (e.target === this.$('login')) this.$('login').classList.add('hidden'); });
     this.$('demoLoginForm').onsubmit = e => { e.preventDefault(); this.login(this.$('demoEmail').value.trim(), {}).then(r => { if (r) this.$('login').classList.add('hidden'); }); };
     this.$('setupForm').onsubmit = e => this.finishSetup(e);
     this.$('nickRandom').onclick = () => { this.$('setupNick').value = this.randomNick(); };
-    // 서버 모드: 로컬에 남은 세션이 서버에도 살아 있는지 확인. 죽었으면 조용히 로그아웃 (초기 설정 창이 헛되이 뜨는 것 방지)
+    await this.onOnline();
+    const cur = this.current(); if (cur && !cur.setupDone) this.openSetup();
+  },
+  /* 서버 설정(Client ID, 로그인 모드) 반영 + 로컬 세션이 서버에 살아 있는지 확인. 서버가 나중에 깨어나도 다시 호출됨 */
+  async onOnline() {
+    const h = (typeof API !== 'undefined' && API.health) || {};
+    this.clientId = h.googleClientId || (App.config || {}).googleClientId || '';
+    if (App.settings().googleClientId) this.clientId = App.settings().googleClientId;
+    this.demoLogin = h.demoLogin !== false; this.requireLogin = !!h.requireLogin;
     if (typeof API !== 'undefined' && API.ready) {
       const sess = Store.get('session', null);
       if (sess) {
         let ok = false;
         if (sess.token) { try { const me = await API.req('GET', '/api/me'); ok = !!me.profile; if (ok) { const all = this.profiles(); all[sess.email] = { ...(all[sess.email] || {}), ...me.profile }; Store.setLocal('profiles', all); } } catch { ok = false; } }
-        if (!ok) { Store.setLocal('session', null); API.token = null; this.renderHeader(); }
+        if (!ok) { Store.setLocal('session', null); API.token = null; }
       }
     }
-    const cur = this.current(); if (cur && !cur.setupDone) this.openSetup();
+    this.renderHeader();
   },
 
   /* ---------- 이메일 규칙 ---------- */

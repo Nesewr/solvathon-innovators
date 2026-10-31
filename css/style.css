@@ -294,3 +294,6 @@ label.check input{width:18px;height:18px;margin:0}
 
 .ai-box{margin-top:8px;padding:8px 12px;background:var(--yellow-pale);border-radius:var(--r);font-size:14px;line-height:1.5}
 .ai-box b{color:var(--ink);margin-right:4px}
+
+.spinner.sm{width:11px;height:11px;border-width:2px;margin-right:5px}
+.srv.waking{color:var(--warning)}

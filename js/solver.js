@@ -33,6 +33,7 @@ const Solver = {
     };
     img.src = url;
   },
+  reset() { this.$('qText').value = ''; this.$('qTags').value = ''; this.clearImage(); this.$('solveResult').classList.add('hidden'); this.$('solveResult').innerHTML = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); this.$('qText').focus(); },
   clearImage() { this.image = null; this.$('qImage').value = ''; this.$('qPreview').classList.add('hidden'); this.$('qImageClear').classList.add('hidden'); },
 
   async solve() {
@@ -58,7 +59,7 @@ const Solver = {
       question: text || result.question_text || '(사진 문제)', imageDataUrl: this.image,
       recognized: !text ? result.question_text : null,
       steps: result.steps || [], answer: result.answer || '', concept: result.concept || '', pitfall: result.pitfall || '',
-      reviewCount: 0, lastReviewed: null, source
+      reviewCount: 0, lastReviewed: null, source, model: result._model || (source === 'ai' ? s.model : null)
     };
     Store.push('notes', note);
     this.renderResult(note, result._notice);
@@ -122,7 +123,8 @@ const Solver = {
         ${n.pitfall ? `<div class="block pitfall full"><h4>자주 하는 실수</h4>${U.md(n.pitfall)}</div>` : ''}
       </div>
       <div class="actions">${n.tags.map(t => `<span class="tag">${U.esc(t)}</span>`).join('')}
-        <span class="muted small">저장 시각 ${U.fmtDate(n.createdAt)} · ${U.esc(n.author)}</span></div>`;
+        <span class="muted small">저장 ${U.fmtDate(n.createdAt)} · ${U.esc(n.author)}${n.model ? ` · ${U.esc(n.model)}` : n.source === 'fallback' ? ' · 예시 풀이' : ''}</span>
+        <span class="grow"></span><button class="ghost small" onclick="Solver.reset()">새 문제 풀기</button></div>`;
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 };

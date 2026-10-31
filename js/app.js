@@ -63,6 +63,11 @@ const App = {
     if (online) this.saveSettings({ seeded: true });
     this.bindNav(); this.bindSettings(); this.updateCounts(); this.renderServerState();
     document.addEventListener('store:refresh', () => { this.updateCounts(); this.rerender(); });
+    document.addEventListener('api:online', async () => {
+      this.saveSettings({ seeded: true }); this.renderServerState(); this.toast('서버에 연결됐습니다.');
+      if (typeof Auth !== 'undefined') await Auth.onOnline();
+      if (typeof Solver !== 'undefined') Solver.renderKeyState(); this.updateCounts(); this.rerender();
+    });
     if (typeof Auth !== 'undefined') await Auth.init(); else this.renderUsers();
     document.addEventListener('store:change', () => { this.updateCounts(); });
     window.addEventListener('hashchange', () => this.route());
@@ -107,8 +112,8 @@ const App = {
   renderServerState() {
     const el = document.getElementById('srvState'); if (!el || typeof API === 'undefined') return;
     const st = API.status(); el.className = 'srv ' + st;
-    el.textContent = st === 'online' ? '● 서버 연결' : st === 'offline' ? '● 서버 없음 · 로컬' : '● 로컬 모드';
-    el.title = st === 'online' ? `서버 ${API.base} 연결됨${API.health && API.health.ai ? ' · AI 키 서버에 있음' : ''}` : '이 브라우저에만 저장됩니다';
+    el.innerHTML = st === 'online' ? '● 서버 연결' : st === 'waking' ? '<span class="spinner sm"></span>서버 깨우는 중…' : st === 'offline' ? '● 서버 없음 · 로컬' : '● 로컬 모드';
+    el.title = st === 'online' ? `서버 연결됨${API.health && API.health.ai ? ' · AI 사용 가능' : ''}` : st === 'waking' ? '무료 서버가 잠들어 있어 깨우는 중입니다 (최대 1분). 그동안 쓴 글은 이 브라우저에만 저장됩니다.' : '이 브라우저에만 저장됩니다';
   },
 
   bindNav() {
