@@ -73,4 +73,5 @@ python3 scraper/run_all.py            # 위 세 개를 한 번에 + 새 활동 �
 
 `auto_update.py` 가 저장소 `data/activities.json` 의 수집일이 3일 지났으면 본인 리로스쿨 계정(`.env`)으로 다시 수집하고,
 교사 실명을 지운 뒤 저장소에 커밋·push 한다. 사이트는 그 파일을 읽는다. `./install_schedule.sh` 로 매일 07:30 launchd 등록.
+GitHub Actions·Render 같은 해외 서버에서는 리로스쿨이 해외 IP를 차단해 수집이 안 되므로, 반드시 한국에 있는 맥에서 돌린다.
 비밀번호·브라우저 세션은 이 폴더가 아니라 개인 작업 폴더(JUNGSAN_DIR)에만 있다.
