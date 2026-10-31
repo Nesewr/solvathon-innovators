@@ -92,7 +92,7 @@ js/home.js         홈(히어로·카운트업·스크롤 등장·오늘의 할 
 server/index.js    Express API(컬렉션·로그인·투표 점수·Gemini 프록시·활동 AI 분석·Firestore 저장)
 assets/            학교 교표(emblem.png)와 크기별 아이콘
 data/seed.json     데모 데이터   data/config.json  서버 주소   data/activities.json  생기부 활동 목록(교사 실명 제거)
-tools/riro-notifier/  리로스쿨 활동 수집 도구 — 팀원이 만든 도구를 데이터 출처로 사용(평가 대상 아님). auto_update.py 가 3일마다 수집→정제→push
+tools/riro-notifier/  리로스쿨 활동 수집 도구 — 팀원이 만든 도구를 데이터 출처로 사용. auto_update.py 가 3일마다 수집→정제→push
 .github/workflows/ 서버 깨우기(10분), 수집 워크플로(수동 전용)
 docs/PLAN.md       개발 계획   docs/img/  실행 화면
 ```
@@ -162,7 +162,7 @@ npm start                                           # http://localhost:8787
 - AI가 제안한 "데모 계정 전환 + 브라우저 저장" 구조를 버리고 **학교 계정 로그인 + 공유 서버 + Firestore**로 바꾸도록 방향을 정함 (실제 서비스처럼 돌게 하자는 결정)
 - 설정 화면에 API 키·서버 주소가 노출되는 설계를 지적해 **내부 설정을 개발자 전용(?dev=1)으로 분리**
 - 홈 히어로가 AI 풀이만 강조하던 것을 **다섯 기능 동등 구성**으로 수정, 히어로를 전체 폭으로, 교표를 실제 학교 교표로 교체, 교표의 상하 움직임은 빼 달라고 지시
-- 리로스쿨 수집 도구를 저장소에 넣을지, 출처를 어떻게 적을지 결정 (팀원 제작 도구로 명시)
+- 리로스쿨 수집 도구를 저장소에 넣을지, 출처를 어떻게 적을지 결정
 - Gemini 모델 선택: 무료 플랜에서 되는 모델을 서버가 자동으로 고르게 하자는 방향 결정
 
 ## 7. 역할
@@ -170,8 +170,8 @@ npm start                                           # http://localhost:8787
 | GitHub 아이디 | 맡은 일 | 주요 파일 |
 | --- | --- | --- |
 | Nesewr | 기획·전체 설계, AI 도구로 프론트·서버 구현 지휘, Render·Firebase·Google OAuth 설정, 배포·검증 | index.html, js/*, server/index.js, data/config.json |
-| rlazmq | 학교 층별 안내도 제작(분실물 지도의 벡터 도면), README 4·7절 작성 | js/floors.js(도면 데이터), README.md |
-| jaehyun5471-del | 리로스쿨 활동 수집 도구 제공·데이터 정리, 인터뷰 근거 수집, 테스트 | tools/riro-notifier/, data/activities.json |
+| rlazmq | 학교 층별 안내도 제작(분실물 지도의 벡터 도면),아이디어 제시, README 4·7절 작성 | js/floors.js(도면 데이터), README.md |
+| jaehyun5471-del | 리로스쿨 활동 수집 도구 개발·데이터 정리, 인터뷰 근거 수집, 테스트 | tools/riro-notifier/, data/activities.json |
 
 ## 8. 한계와 다음 계획
 
