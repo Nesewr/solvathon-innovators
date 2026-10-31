@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중산 올인원</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand" onclick="App.go('solver')">
+    <span class="logo">J</span><span>중산 올인원</span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="solver">AI 문제풀이</button>
+    <button data-tab="notes">오답노트 <span class="badge" id="notesCount">0</span></button>
+    <button data-tab="lost">분실물 센터 <span class="badge" id="lostCount">0</span></button>
+    <button data-tab="community">커뮤니티</button>
+  </nav>
+  <div class="user">
+    <select id="userSelect" title="데모 계정 전환"></select>
+    <button class="icon" id="settingsBtn" title="설정">⚙</button>
+  </div>
+</header>
+
+<main id="main">
+  <!-- AI 문제풀이 -->
+  <section id="tab-solver" class="tab">
+    <div class="card">
+      <h2>모르는 문제, 바로 풀어보기</h2>
+      <p class="muted">문제를 입력하거나 사진을 올리면 AI가 단계별로 풀고, 결과는 오답노트에 자동 저장됩니다.</p>
+      <div class="row">
+        <label>과목
+          <select id="qSubject">
+            <option>수학</option><option>국어</option><option>영어</option><option>물리</option><option>화학</option><option>생명과학</option><option>지구과학</option><option>사회</option><option>한국사</option><option>기타</option>
+          </select>
+        </label>
+        <label class="grow">태그 (쉼표로 구분)
+          <input id="qTags" placeholder="예: 미분, 극값">
+        </label>
+      </div>
+      <label>문제 텍스트
+        <textarea id="qText" rows="5" placeholder="문제를 그대로 적어 주세요. 사진만 올려도 됩니다."></textarea>
+      </label>
+      <div class="row">
+        <label class="file">
+          <input type="file" id="qImage" accept="image/*">
+          <span>📷 문제 사진 올리기 (선택)</span>
+        </label>
+        <img id="qPreview" class="preview hidden" alt="문제 사진 미리보기">
+        <button class="ghost small hidden" id="qImageClear">사진 제거</button>
+      </div>
+      <div class="actions">
+        <button class="primary" id="solveBtn">AI 풀이</button>
+        <button class="ghost" id="exampleBtn">예시 문제 넣기</button>
+        <span class="muted small" id="keyState"></span>
+      </div>
+    </div>
+    <div class="card hidden" id="solveResult"></div>
+  </section>
+
+  <!-- 오답노트 -->
+  <section id="tab-notes" class="tab hidden">
+    <div class="card">
+      <div class="row between">
+        <h2>오답노트</h2>
+        <div class="row">
+          <select id="nSubjectFilter"><option value="">모든 과목</option></select>
+          <input id="nSearch" placeholder="태그·내용 검색">
+        </div>
+      </div>
+      <div id="notesList" class="list"></div>
+    </div>
+    <div class="card hidden" id="noteDetail"></div>
+  </section>
+
+  <!-- 분실물 센터 -->
+  <section id="tab-lost" class="tab hidden">
+    <div class="card">
+      <div class="row between">
+        <h2>분실물 센터</h2>
+        <div class="row">
+          <select id="lFilter">
+            <option value="finding">찾는 중</option>
+            <option value="found">찾음</option>
+            <option value="">전체</option>
+          </select>
+          <button class="primary" id="lostNewBtn">+ 분실물 등록</button>
+        </div>
+      </div>
+      <form id="lostForm" class="form hidden">
+        <div class="row">
+          <label class="grow">물건 <input name="item" required placeholder="예: 검은색 에어팟 케이스"></label>
+          <label>종류
+            <select name="kind"><option>잃어버렸어요</option><option>주웠어요</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="grow">장소 <input name="place" required placeholder="예: 3층 과학실 앞"></label>
+          <label>날짜 <input name="date" type="date" required></label>
+        </div>
+        <label>설명 <textarea name="desc" rows="2" placeholder="특징, 스티커, 안에 든 것 등"></textarea></label>
+        <label>연락 방법
+          <select name="contact">
+            <option>교무실에 맡겨 두었어요</option>
+            <option>담임 선생님께 말씀드렸어요</option>
+            <option>이 글에 댓글로 알려주세요</option>
+          </select>
+        </label>
+        <p class="muted small">전화번호·학번·실명은 적지 마세요. 닉네임으로 등록됩니다.</p>
+        <div class="actions">
+          <button class="primary" type="submit">등록</button>
+          <button class="ghost" type="button" id="lostCancel">취소</button>
+        </div>
+      </form>
+      <div id="lostList" class="list"></div>
+    </div>
+  </section>
+
+  <!-- 커뮤니티 -->
+  <section id="tab-community" class="tab hidden">
+    <div class="card">
+      <div class="row between">
+        <h2>커뮤니티</h2>
+        <button class="primary" id="postNewBtn">+ 글쓰기</button>
+      </div>
+      <form id="postForm" class="form hidden">
+        <label>제목 <input name="title" required></label>
+        <label>내용 <textarea name="body" rows="4" required></textarea></label>
+        <div class="actions">
+          <button class="primary" type="submit">올리기</button>
+          <button class="ghost" type="button" id="postCancel">취소</button>
+        </div>
+      </form>
+      <div id="postList" class="list"></div>
+    </div>
+    <div class="card hidden" id="postDetail"></div>
+  </section>
+</main>
+
+<!-- 설정 -->
+<div class="modal hidden" id="settings">
+  <div class="modal-box">
+    <h3>설정</h3>
+    <label>Gemini API 키
+      <input id="apiKey" type="password" placeholder="AIza... (브라우저에만 저장됩니다)">
+    </label>
+    <p class="muted small">키는 이 브라우저의 localStorage에만 저장되고 서버나 저장소에 올라가지 않습니다. 키가 없으면 예시 풀이로 동작합니다.</p>
+    <label>모델
+      <select id="apiModel">
+        <option value="gemini-2.5-flash">gemini-2.5-flash (추천)</option>
+        <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (빠름)</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro (느리지만 정확)</option>
+      </select>
+    </label>
+    <hr>
+    <div class="actions">
+      <button class="ghost danger" id="resetDemo">데모 데이터 초기화</button>
+      <button class="primary" id="settingsClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/app.js"></script>
+<script src="js/solver.js"></script>
+<script src="js/notes.js"></script>
+<script src="js/lost.js"></script>
+<script src="js/community.js"></script>
+<script>App.init();</script>
+</body>
+</html>
