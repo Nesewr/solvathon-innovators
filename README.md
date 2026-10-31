@@ -127,7 +127,8 @@ data/seed.json     데모 데이터   data/config.json  서버 주소·Client ID
 | GitHub 아이디 | 맡은 일 | 주요 파일 |
 | --- | --- | --- |
 | Nesewr | | |
-
+| rlazmq | --- | --- |
+| jaehyun5471-del | --- | --- |
 ## 8. 한계와 다음 계획
 
 **한계:**
