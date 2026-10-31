@@ -13,7 +13,7 @@ const Solver = {
   renderKeyState() {
     const s = App.settings(); const el = this.$('keyState');
     const serverAI = typeof API !== 'undefined' && API.ready && API.health && API.health.ai;
-    el.textContent = serverAI ? 'AI 준비됨 (서버)' : s.apiKey ? `Gemini 연결됨 · ${s.model}` : 'API 키 없음 → 예시 풀이 모드 (⚙ 설정에서 입력)';
+    el.textContent = serverAI ? 'AI 준비됨' : s.apiKey ? `Gemini 연결됨 · ${s.model}` : 'AI 준비 중 → 지금은 예시 풀이로 보여줍니다';
   },
   fillExample() {
     const ex = App.seed && App.seed.example; if (!ex) return;
@@ -91,7 +91,7 @@ const Solver = {
     const fb = (App.seed && App.seed.fallback) || {};
     const isExample = text && fb.question_text && text.replace(/\s/g, '') === fb.question_text.replace(/\s/g, '');
     let notice;
-    if (err.code === 'NO_KEY') notice = 'API 키가 없어 예시 풀이를 보여줍니다. ⚙ 설정에서 Gemini 키를 넣으면 실제 풀이가 나옵니다.';
+    if (err.code === 'NO_KEY') notice = 'AI 서버가 아직 준비되지 않아 예시 풀이를 보여줍니다.';
     else if (err.name === 'AbortError') notice = '응답이 45초 안에 오지 않아 예시 풀이로 대체했습니다.';
     else if (err.status) notice = `AI 서버 오류(${err.message})로 예시 풀이로 대체했습니다.`;
     else if (err.code === 'HTTP') notice = `AI 서버 오류(${err.status})로 예시 풀이로 대체했습니다. ${err.status === 400 || err.status === 403 ? '키가 맞는지 확인해 주세요.' : ''}`;
@@ -100,8 +100,8 @@ const Solver = {
     return {
       subject, tags, question_text: text,
       steps: ['(예시 모드) 문제에서 주어진 조건과 구하려는 것을 먼저 구분한다.', '관련 개념과 공식을 떠올려 조건을 식으로 옮긴다.', '식을 정리해 답을 구하고, 단위와 조건에 맞는지 확인한다.'],
-      answer: '실제 풀이는 API 키를 설정한 뒤 다시 눌러 주세요.',
-      concept: '이 노트는 예시 모드로 저장되었습니다. 설정에서 키를 넣고 같은 문제를 다시 풀면 새 노트가 생깁니다.',
+      answer: 'AI가 준비되면 같은 문제를 다시 풀어 보세요.',
+      concept: '이 노트는 예시 모드로 저장되었습니다. AI가 준비된 뒤 같은 문제를 다시 풀면 새 노트가 생깁니다.',
       pitfall: '', _notice: notice
     };
   },

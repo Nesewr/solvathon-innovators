@@ -55,6 +55,8 @@ const App = {
     try { this.seed = await (await fetch('data/seed.json')).json(); } catch { this.seed = null; }
     let config = {}; try { config = await (await fetch('data/config.json', { cache: 'no-store' })).json(); } catch { }
     this.config = config;
+    if (/[?&]dev=1/.test(location.search)) this.saveSettings({ dev: true }); if (/[?&]dev=0/.test(location.search)) this.saveSettings({ dev: false });
+    this.dev = !!this.settings().dev;
     if (typeof API !== 'undefined') await API.init(config);
     const online = typeof API !== 'undefined' && API.ready;
     if (!online && !this.settings().seeded && this.seed) this.applySeed();
@@ -142,6 +144,7 @@ const App = {
       acc.innerHTML = p && p.setupDone
         ? `<div class="card soft" style="margin-bottom:16px"><div class="eyebrow">내 계정</div><b>${U.esc(p.nickname)}</b> <span class="tag green">${Auth.roleLabel(p)}</span><p class="small muted" style="margin:6px 0 10px">${U.esc(Auth.describe(p))}<br>${U.esc(p.email)}</p><div class="actions" style="margin:0"><button type="button" class="ghost small" onclick="document.getElementById('settings').classList.add('hidden');Auth.openSetup()">닉네임·과목 바꾸기</button><button type="button" class="ghost small danger" onclick="document.getElementById('settings').classList.add('hidden');Auth.logout()">로그아웃</button></div></div>`
         : `<div class="card soft" style="margin-bottom:16px"><div class="eyebrow">내 계정</div><p class="small muted" style="margin:0 0 10px">로그인하지 않았습니다. 데모 계정으로 사용 중입니다.</p><button type="button" class="primary small" onclick="document.getElementById('settings').classList.add('hidden');Auth.openLogin()">학교 계정 로그인</button></div>`;
+      document.getElementById('devSettings').classList.toggle('hidden', !this.dev);
       modal.classList.remove('hidden');
     };
     const close = () => {

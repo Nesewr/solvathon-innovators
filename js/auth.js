@@ -77,7 +77,7 @@ const Auth = {
   openLogin() {
     this.$('login').classList.remove('hidden'); this.$('demoEmail').value = '';
     const box = this.$('gBtn'); box.innerHTML = '';
-    if (!this.clientId) { box.innerHTML = `<p class="small muted">Google 로그인 버튼은 ⚙ 설정에 OAuth Client ID를 넣으면 나타납니다. 지금은 아래에 학교 이메일을 직접 입력해 주세요.</p>`; return; }
+    if (!this.clientId) { box.innerHTML = `<p class="small muted">Google 로그인 버튼은 준비 중입니다. 아래에 학교 이메일을 직접 입력해 주세요.</p>`; return; }
     box.innerHTML = `<p class="small muted"><span class="spinner"></span>Google 로그인 불러오는 중…</p>`;
     this.loadGIS().then(() => {
       google.accounts.id.initialize({ client_id: this.clientId, hd: this.DOMAIN, callback: r => this.onGoogle(r), ux_mode: 'popup' });
