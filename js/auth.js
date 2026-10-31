@@ -83,7 +83,7 @@ const Auth = {
     const track = this.$('setupTrack').value, major = this.$('setupMajor').value.trim().slice(0, 30);
     if (typeof API !== 'undefined' && API.ready) { try { await API.setup({ nickname: nick, subject: this.$('setupSubject').value, track, major }); } catch (e) { App.toast(e.message, 'error'); return; } }
     const all = this.profiles(); all[p.email] = { ...p, nickname: nick, subject: this.$('setupSubject').value, track, major, setupDone: true, setupAt: new Date().toISOString() };
-    if (typeof Activities !== 'undefined') Activities.profileChanged();
+    try { if (typeof Activities !== 'undefined') Activities.profileChanged(); } catch (e) { console.warn(e); }
     Store.setLocal('profiles', all); if (typeof API !== 'undefined' && API.ready) API.pullAll(); this.$('setup').classList.add('hidden'); this.renderHeader();
     if (typeof Solver !== 'undefined') { const sel = document.getElementById('qSubject'); if (sel) sel.value = all[p.email].subject; }
     App.toast(`환영합니다, ${nick}님!`); App.route(true);

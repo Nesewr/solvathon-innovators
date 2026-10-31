@@ -11,7 +11,7 @@ const Activities = {
     art: ['미술', '음악', '체육', '디자인', '공연', '연주', '밴드', '스포츠', '사진', '영상', '축제', '무용', '연극', '오케스트라']
   },
   profile() { const p = typeof Auth !== 'undefined' && Auth.current(); return p && p.setupDone ? p : null; },
-  profileChanged() { this.ai = null; this.renderList(); },
+  profileChanged() { this.ai = null; if (this.data) this.renderList(); },
   async analyze() {
     if (typeof Auth !== 'undefined' && Auth.gate()) return;
     const serverAI = typeof API !== 'undefined' && API.ready && API.health && API.health.ai;
